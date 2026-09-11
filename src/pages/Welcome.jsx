@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import pendulumImage from "../assets/pendulum-img.png";
 
-export default function Welcome({ onNavigate }) {
+export default function Welcome() {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -27,12 +27,8 @@ export default function Welcome({ onNavigate }) {
       {/* الجملة الأنيقة */}
       <h2 style={styles.quoteText}>« أثمن ما خلق الله الزمن »</h2>
 
-      {/* البندول المتحرك (يفتح صفحة إنشاء حساب عند الضغط) */}
-      <button 
-        style={styles.pendulumBtn} 
-        onClick={() => onNavigate("signup")}
-        aria-label="إنشاء حساب"
-      >
+      {/* البندول المتحرك */}
+      <div style={styles.pendulumContainer}>
         <div style={styles.pendulumPivot}></div>
         <div style={styles.pendulumArmContainer}>
           <div style={styles.pendulumRod}></div>
@@ -40,23 +36,13 @@ export default function Welcome({ onNavigate }) {
             <img src={pendulumImage} alt="بندول الساعة" style={styles.pendulumImg} />
           </div>
         </div>
-        <span style={styles.hintText}>إنشاء حساب</span>
-      </button>
-
-      {/* زر تسجيل الدخول */}
-      <button style={styles.loginLink} onClick={() => onNavigate("login")}>
-        لديك حساب بالفعل؟ تسجيل الدخول
-      </button>
+      </div>
 
       {/* تنسيقات CSS الداخلية لحركة البندول والشاشة */}
       <style>{`
         @keyframes swing {
           0% { transform: rotate(20deg); }
           100% { transform: rotate(-20deg); }
-        }
-        .pendulum-swing {
-          animation: swing 3s ease-in-out infinite alternate;
-          transform-origin: top center;
         }
       `}</style>
     </div>
@@ -107,15 +93,11 @@ const styles = {
     marginBottom: "30px",
     textAlign: "center",
   },
-  pendulumBtn: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
+  pendulumContainer: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    padding: "0",
-    outline: "none",
+    marginTop: "10px",
   },
   pendulumPivot: {
     width: "8px",
@@ -149,19 +131,5 @@ const styles = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-  },
-  hintText: {
-    fontSize: "0.8rem",
-    color: "#94a3b8",
-    marginTop: "10px",
-  },
-  loginLink: {
-    background: "none",
-    border: "none",
-    color: "#cbd5e1",
-    fontSize: "0.9rem",
-    textDecoration: "underline",
-    marginTop: "25px",
-    cursor: "pointer",
   },
 };
