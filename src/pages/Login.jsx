@@ -34,8 +34,14 @@ export default function Login({ onNavigate, onAuthSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4 relative overflow-hidden">
+      {/* خلفية زجاجية مع ألوان بارزة */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 right-1/4 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 left-1/4 w-72 h-72 bg-purple-500/15 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
         <button
           onClick={() => onNavigate("welcome")}
           className="text-slate-400 hover:text-white flex items-center gap-2 mb-6 transition-colors"
@@ -44,7 +50,7 @@ export default function Login({ onNavigate, onAuthSuccess }) {
           العودة للصفحة الرئيسية
         </button>
 
-        <div className="bg-slate-800/60 backdrop-blur-xl rounded-3xl p-8 border border-slate-700/50 shadow-2xl">
+        <div className="bg-slate-800/60 backdrop-blur-2xl rounded-3xl p-8 border border-slate-700/60 shadow-2xl shadow-blue-950/40">
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 mx-auto mb-4">
               <LogIn className="w-8 h-8 text-white" />
