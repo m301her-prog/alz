@@ -5,7 +5,7 @@ import Login from "./pages/Login.jsx";
 import ChatRoom from "./pages/ChatRoom.jsx";
 import { getCurrentUser, logout } from "./services/authService.js";
 
-function App() {
+export default function App() {
   const [page, setPage] = useState("welcome");
   const [currentUser, setCurrentUser] = useState(null);
   const [ready, setReady] = useState(false);
@@ -36,29 +36,19 @@ function App() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div style={{ minHeight: '100vh', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '32px', height: '32px', border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
       </div>
     );
   }
 
-  // منع تحديث الـ State مباشرة داخل الـ Render لتجنب تحذيرات React، واستبدالها بالتحقق الشرطي المباشر
-  let activePage = page;
-  if (currentUser && activePage !== "chat" && activePage !== "welcome" && activePage !== "signup" && activePage !== "login") {
-    // ترك التنقل بحرية حسب رغبة المستخدم
-  }
-
-  switch (activePage) {
+  switch (page) {
     case "welcome":
       return <Welcome onNavigate={handleNavigate} />;
     case "signup":
-      return (
-        <Signup onNavigate={handleNavigate} onAuthSuccess={handleAuthSuccess} />
-      );
+      return <Signup onNavigate={handleNavigate} onAuthSuccess={handleAuthSuccess} />;
     case "login":
-      return (
-        <Login onNavigate={handleNavigate} onAuthSuccess={handleAuthSuccess} />
-      );
+      return <Login onNavigate={handleNavigate} onAuthSuccess={handleAuthSuccess} />;
     case "chat":
       if (!currentUser) {
         return <Welcome onNavigate={handleNavigate} />;
@@ -68,5 +58,3 @@ function App() {
       return <Welcome onNavigate={handleNavigate} />;
   }
 }
-
-export default App;
