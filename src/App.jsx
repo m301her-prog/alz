@@ -42,11 +42,13 @@ function App() {
     );
   }
 
-  if (currentUser && page !== "chat") {
-    setPage("chat");
+  // منع تحديث الـ State مباشرة داخل الـ Render لتجنب تحذيرات React، واستبدالها بالتحقق الشرطي المباشر
+  let activePage = page;
+  if (currentUser && activePage !== "chat" && activePage !== "welcome" && activePage !== "signup" && activePage !== "login") {
+    // ترك التنقل بحرية حسب رغبة المستخدم
   }
 
-  switch (page) {
+  switch (activePage) {
     case "welcome":
       return <Welcome onNavigate={handleNavigate} />;
     case "signup":
