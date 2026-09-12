@@ -1,132 +1,96 @@
-// طبقة خدمة وسيطة تعمل كـ Mock API بين الواجهة والبيانات
-// تحاكي إنشاء الحسابات وتسجيل الدخول باستخدام LocalStorage
+// رابط السيرفر الأساسي على Vercel
+const API_BASE_URL = "https://alz-taupe.vercel.app/api";
 
-import { SEED_USERS } from "./seedData.js";
+/**
+ * جلب الرسائل الخاصة بغرفة معينة مع التحقق من عضوية المستخدم
+ * @param {string} roomId - معرف الغرفة
+ * @param {string} userId - معرف المستخدم الحالي
+ * @returns {Promise<Array>} - قائمة الرسائل
+ */
+export async function getRoomMessages(roomId, userId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/messages?roomId=${roomId}&userId=${userId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
-const USERS_KEY = "chatapp_users";
-const CURRENT_USER_KEY = "chatapp_current_user";
+    const data = await response.json();
 
-// محاكاة تأخير الشبكة
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    if (!response.ok) {
+      throw new Error(data.error || "فشل في جلب الرسائل");
+    }
 
-// التأكد من تهيئة البيانات الأولية
-function ensureUsersInitialized() {
-  const existing = localStorage.getItem(USERS_KEY);
-  if (!existing) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(SEED_USERS));
+    return data;
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    throw error;
   }
 }
 
-// جلب جميع المستخدمين
-function getAllUsers() {
-  ensureUsersInitialized();
-  const data = localStorage.getItem(USERS_KEY);
-  return data ? JSON.parse(data) : [];
-}
+/**
+ * إرسال رسالة جديدة إلى غرفة خاصة (يشترط أن يكون المستخدم عضواً فيها)
+ * @param {string} roomId - معرف الغرفة
+ * @param {string} userId - معرف المستخدم المرسل
+ * @param {string} text - نص الرسالة
+ * @returns {Promise<Object>} - الرسالة التي تم حفظها
+ */
+export async function sendMessage(roomId, userId, text) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/send-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        roomId,
+        userId,
+        text,
+      }),
+    });
 
-// حفظ قائمة المستخدمين
-function saveAllUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
+    const data = await response.json();
 
-// توليد معرف فريد
-function generateId(prefix = "u") {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
+    if (!response.ok) {
+      throw new Error(data.error || "فشل في إرسال الرسالة");
+    }
 
-// اختيار لون عشوائي للصورة الرمزية
-const AVATAR_COLORS = [
-  "#3b82f6",
-  "#ec4899",
-  "#10b981",
-  "#f59e0b",
-  "#8b5cf6",
-  "#ef4444",
-  "#06b6d4",
-  "#84cc16",
-];
-
-function pickRandomColor() {
-  return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
-}
-
-// التحقق من صيادة البريد الإلكتروني
-export function validateEmail(email) {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
-}
-
-// إنشاء حساب جديد
-export async function signup({ name, email, password }) {
-  await delay(600);
-
-  ensureUsersInitialized();
-  const users = getAllUsers();
-
-  // التحقق من عدم وجود بريد مكرر
-  const existingUser = users.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase()
-  );
-  if (existingUser) {
-    throw new Error("هذا البريد الإلكتروني مسجل بالفعل");
+    return data;
+  } catch (error) {
+    console.error("Error sending message:", error);
+    throw error;
   }
-
-  const newUser = {
-    id: generateId("u"),
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    password,
-    avatar: name.trim().charAt(0),
-    color: pickRandomColor(),
-    createdAt: new Date().toISOString(),
-  };
-
-  users.push(newUser);
-  saveAllUsers(users);
-
-  // تسجيل الدخول تلقائياً بعد إنشاء الحساب
-  const { password: _pwd, ...userWithoutPassword } = newUser;
-  localStorage.setItem(
-    CURRENT_USER_KEY,
-    JSON.stringify(userWithoutPassword)
-  );
-
-  return userWithoutPassword;
 }
 
-// تسجيل الدخول
-export async function login({ email, password }) {
-  await delay(500);
+/**
+ * حذف رسالة (بشرط أن يكون المستخدم هو صاحب الرسالة)
+ * @param {string} messageId - معرف الرسالة المراد حذفها
+ * @param {string} userId - معرف المستخدم صاحب الطلب
+ * @returns {Promise<Object>} - تأكيد النجاح
+ */
+export async function deleteMessage(messageId, userId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/delete-message`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messageId,
+        userId,
+      }),
+    });
 
-  ensureUsersInitialized();
-  const users = getAllUsers();
+    const data = await response.json();
 
-  const user = users.find(
-    (u) =>
-      u.email.toLowerCase() === email.trim().toLowerCase() &&
-      u.password === password
-  );
+    if (!response.ok) {
+      throw new Error(data.error || "فشل في حذف الرسالة");
+    }
 
-  if (!user) {
-    throw new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+    return data;
+  } catch (error) {
+    console.error("Error deleting message:", error);
+    throw error;
   }
-
-  const { password: _pwd, ...userWithoutPassword } = user;
-  localStorage.setItem(
-    CURRENT_USER_KEY,
-    JSON.stringify(userWithoutPassword)
-  );
-
-  return userWithoutPassword;
-}
-
-// تسجيل الخروج
-export async function logout() {
-  localStorage.removeItem(CURRENT_USER_KEY);
-}
-
-// جلب المستخدم الحالي
-export function getCurrentUser() {
-  const data = localStorage.getItem(CURRENT_USER_KEY);
-  return data ? JSON.parse(data) : null;
 }
