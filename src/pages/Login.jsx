@@ -34,7 +34,7 @@ export default function Login({ onNavigate, onAuthSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 flex items-center justify-center px-4 relative overflow-y-auto py-10">
       {/* خلفية زجاجية مع تدرجات لونية متوهجة أكثر جاذبية ونعومة */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -right-32 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
@@ -42,7 +42,7 @@ export default function Login({ onNavigate, onAuthSuccess }) {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px]"></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-md relative z-10 my-auto">
         <button
           onClick={() => onNavigate("welcome")}
           className="text-slate-400 hover:text-white flex items-center gap-2 mb-6 transition-colors group"
