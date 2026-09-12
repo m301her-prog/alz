@@ -12,6 +12,63 @@ export function validateEmail(email) {
 }
 
 /**
+ * إنشاء حساب جديد للمستخدم
+ * @param {Object} userData - بيانات المستخدم (name, email, password, avatar, color)
+ * @returns {Promise<Object>} - بيانات المستخدم المنشأ
+ */
+export async function signup(userData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/signup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "فشل في إنشاء الحساب");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error signing up:", error);
+    throw error;
+  }
+}
+
+/**
+ * تسجيل دخول المستخدم
+ * @param {string} email - البريد الإلكتروني
+ * @param {string} password - كلمة المرور
+ * @returns {Promise<Object>} - بيانات المستخدم المسجل
+ */
+export async function login(email, password) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "فشل في تسجيل الدخول");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error logging in:", error);
+    throw error;
+  }
+}
+
+/**
  * جلب الرسائل الخاصة بغرفة معينة مع التحقق من عضوية المستخدم
  * @param {string} roomId - معرف الغرفة
  * @param {string} userId - معرف المستخدم الحالي
