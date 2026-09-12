@@ -69,6 +69,31 @@ export async function login(email, password) {
 }
 
 /**
+ * الحصول على المستخدم الحالي المخزن في الذاكرة المحلية (localStorage)
+ * @returns {Object|null} - بيانات المستخدم أو null إذا لم يكن مسجلاً
+ */
+export function getCurrentUser() {
+  try {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return null;
+  }
+}
+
+/**
+ * تسجيل الخروج وحذف بيانات المستخدم من الذاكرة المحلية
+ */
+export function logout() {
+  try {
+    localStorage.removeItem("user");
+  } catch (error) {
+    console.error("Error logging out:", error);
+  }
+}
+
+/**
  * جلب الرسائل الخاصة بغرفة معينة مع التحقق من عضوية المستخدم
  * @param {string} roomId - معرف الغرفة
  * @param {string} userId - معرف المستخدم الحالي
