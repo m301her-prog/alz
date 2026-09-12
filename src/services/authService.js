@@ -2,6 +2,16 @@
 const API_BASE_URL = "https://alz-taupe.vercel.app/api";
 
 /**
+ * التحقق من صحة البريد الإلكتروني
+ * @param {string} email - البريد الإلكتروني المراد التحقق منه
+ * @returns {boolean} - صحيح أو خطأ
+ */
+export function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+}
+
+/**
  * جلب الرسائل الخاصة بغرفة معينة مع التحقق من عضوية المستخدم
  * @param {string} roomId - معرف الغرفة
  * @param {string} userId - معرف المستخدم الحالي
