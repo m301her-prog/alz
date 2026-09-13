@@ -24,7 +24,7 @@ export default function Login({ onNavigate, onAuthSuccess }) {
     setLoading(true);
     try {
       const user = await login({ email, password });
-      onAuthSuccess(user);
+      if (onAuthSuccess) onAuthSuccess(user);
     } catch (err) {
       setError(err.message || "حدث خطأ أثناء تسجيل الدخول");
     } finally {
@@ -32,13 +32,23 @@ export default function Login({ onNavigate, onAuthSuccess }) {
     }
   }
 
+  // دالة آمنة للاستجابة للانتقال حتى لو لم يتم تمرير الـ Prop
+  const handleNavigation = (target) => {
+    if (typeof onNavigate === "function") {
+      onNavigate(target);
+    } else {
+      console.warn("onNavigate is not provided to Login component!");
+    }
+  };
+
   return (
     <div style={styles.container} dir="rtl">
       <div style={styles.card}>
         
         {/* زر العودة */}
         <button 
-          onClick={() => onNavigate("welcome")} 
+          type="button"
+          onClick={() => handleNavigation("welcome")} 
           style={styles.backButton}
         >
           ← العودة للرئيسية
@@ -101,7 +111,7 @@ export default function Login({ onNavigate, onAuthSuccess }) {
           <p style={styles.footerText}>ليس لديك حساب؟</p>
           <button
             type="button"
-            onClick={() => onNavigate("signup")}
+            onClick={() => handleNavigation("signup")}
             style={styles.signupLink}
           >
             إنشاء حساب جديد
@@ -117,7 +127,7 @@ export default function Login({ onNavigate, onAuthSuccess }) {
   );
 }
 
-// تصميم منسق ومرتب بعيداً عن مشاكل التيلويند المفقود
+// التنسيقات كما هي
 const styles = {
   container: {
     minHeight: '100vh',
@@ -225,7 +235,7 @@ const styles = {
     textAlign: 'center',
     display: 'flex',
     justifyContent: 'center',
-    alignItem: 'center',
+    alignItems: 'center',
     gap: '6px',
   },
   footerText: {
