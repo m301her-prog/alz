@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { validateEmail } from "../services/authService.js";
-// يمكنك استيراد دالة التسجيل الخاصة بإنشاء الحساب هنا إن وجدت، مثال: import { signup } from "../services/authService.js";
+import { signup, validateEmail } from "../services/authService.js";
 
 export default function Signup({ onNavigate, onAuthSuccess }) {
   const [name, setName] = useState("");
@@ -29,15 +28,16 @@ export default function Signup({ onNavigate, onAuthSuccess }) {
 
     setLoading(true);
     try {
-      // استبدل هذه الخطوة بدالة إنشاء الحساب الفعلية لديك
-      // const user = await signup({ name, email, password });
-      // onAuthSuccess(user);
+      // إرسال البيانات لقاعدة البيانات عبر دالة signup
+      const user = await signup({ name, email, password });
       
-      // محاكاة مؤقتة لنجاح التسجيل في حال لم تكن الدالة جاهزة بعد:
-      setTimeout(() => {
-        onNavigate("login"); // أو الانتقال لتسجيل الدخول أو الصفحة الرئيسية مباشرة
-      }, 1000);
+      // حفظ المستخدم في الذاكرة المحلية (إذا لم تقم خدمة الsignup بحفظه تلقائياً)
+      localStorage.setItem("user", JSON.stringify(user));
 
+      // تمرير المستخدم الناجح لفتح غرفة الدردشة فوراً
+      if (onAuthSuccess) {
+        onAuthSuccess(user);
+      }
     } catch (err) {
       setError(err.message || "حدث خطأ أثناء إنشاء الحساب");
     } finally {
@@ -51,6 +51,7 @@ export default function Signup({ onNavigate, onAuthSuccess }) {
         
         {/* زر العودة لتسجيل الدخول أو للرئيسية */}
         <button 
+          type="button"
           onClick={() => onNavigate("login")} 
           style={styles.backButton}
         >
@@ -137,7 +138,7 @@ export default function Signup({ onNavigate, onAuthSuccess }) {
   );
 }
 
-// نفس التنسيقات المنسقة للحفاظ على الشكل الموحد
+// التنسيقات كما هي تماماً
 const styles = {
   container: {
     minHeight: '100vh',
