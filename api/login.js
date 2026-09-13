@@ -5,17 +5,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور' });
-  }
-
   try {
+    // التأكد من قراءة البيانات بشكل صحيح سواء كانت كائن جاهز أو نص بحاجة لـ JSON.parse
+    let body = req.body;
+    if (typeof body === 'string') {
+      body = JSON.parse(body);
+    }
+
+    const { email, password } = body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور' });
+    }
+
     // 1. البحث عن المستخدم بواسطة البريد الإلكتروني
     const userResult = await pool.query(
       `SELECT id, name, email, password, avatar, color FROM users WHERE email = $1`,
-      [email]
+      [email.trim().toLowerCase()]
     );
 
     if (userResult.rows.length === 0) {
@@ -25,7 +31,6 @@ export default async function handler(req, res) {
     const user = userResult.rows[0];
 
     // 2. التحقق من تطابق كلمة المرور
-    // (إذا كنت تستخدم التشفير، استبدل المقارنة المباشرة بـ bcrypt.compare)
     if (user.password !== password) {
       return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
     }
@@ -40,6 +45,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Login Error:', error);
-    return res.status(500).json({ error: 'حدث خطأ داخلي في الخادم' });
+    return res.status(500).json({ error: 'حدث خطأ داخلي في الخادم: ' + error.message });
   }
 }
