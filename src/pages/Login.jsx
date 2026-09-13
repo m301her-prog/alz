@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login, validateEmail } from "../services/authService.js";
+import { validateEmail } from "../services/authService.js";
 
 export default function Login({ onNavigate, onAuthSuccess }) {
   const [email, setEmail] = useState("");
@@ -23,8 +23,21 @@ export default function Login({ onNavigate, onAuthSuccess }) {
 
     setLoading(true);
     try {
-      const user = await login({ email, password });
-      if (onAuthSuccess) onAuthSuccess(user);
+      const response = await fetch('https://alz-taupe.vercel.app/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "حدث خطأ أثناء تسجيل الدخول");
+      }
+
+      if (onAuthSuccess) onAuthSuccess(data.user);
     } catch (err) {
       setError(err.message || "حدث خطأ أثناء تسجيل الدخول");
     } finally {
