@@ -6,10 +6,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    // التأكد من قراءة البيانات بشكل صحيح سواء كانت كائن جاهز أو نص بحاجة لـ JSON.parse
     let body = req.body;
-    if (typeof body === 'string') {
-      body = JSON.parse(body);
+
+    // قراءة البيانات بالطريقة اليدوية المضمونة في Vercel إذا كان req.body فارغاً أو نصياً
+    if (!body || typeof body === 'string') {
+      let rawData = '';
+      if (typeof body === 'string') {
+        rawData = body;
+      } else {
+        // قراءة الـ stream إذا كان فارغاً
+        for await (const chunk of req) {
+          rawData += chunk;
+        }
+      }
+      if (rawData) {
+        body = JSON.parse(rawData);
+      }
     }
 
     const { email, password } = body || {};
@@ -35,7 +47,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
     }
 
-    // إرجاع بيانات المستخدم (بدون كلمة المرور لأسباب أمنية)
+    // إرجاع بيانات المستخدم (بدون كلمة المرور)
     const { password: _, ...userData } = user;
 
     return res.status(200).json({
