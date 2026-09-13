@@ -1,20 +1,13 @@
 import { useState, useEffect } from "react";
 import pendulumImage from "../assets/pendulum-img.png";
-import Login from "./Login"; // استيراد صفحة تسجيل الدخول/إنشاء الحساب مباشرة
 
-export default function Welcome() {
+export default function Welcome({ onNavigate }) {
   const [time, setTime] = useState(new Date());
-  const [showLogin, setShowLogin] = useState(false); // حالة للتحكم في عرض صفحة Login
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  // إذا تم الضغط على البندول، يتم عرض مكون Login بدلاً من شاشة الترحيب
-  if (showLogin) {
-    return <Login />;
-  }
 
   const timeString = time.toLocaleTimeString("en-US", { hour12: false });
   const dateString = time.toLocaleDateString("ar-EG", {
@@ -34,10 +27,14 @@ export default function Welcome() {
       {/* الجملة الأنيقة */}
       <h2 style={styles.quoteText}>« أثمن ما خلق الله الزمن »</h2>
 
-      {/* البندول المتحرك (قابل للنقر ليفتح صفحة Login) */}
+      {/* البندول المتحرك (قابل للنقر ليبلغ الأب بالانتقال عبر onNavigate) */}
       <div 
         style={styles.pendulumBtn} 
-        onClick={() => setShowLogin(true)}
+        onClick={() => {
+          if (typeof onNavigate === "function") {
+            onNavigate("login");
+          }
+        }}
       >
         <div style={styles.pendulumPivot}></div>
         <div style={styles.pendulumArmContainer}>
@@ -142,6 +139,6 @@ const styles = {
   pendulumImg: {
     width: "100%",
     height: "100%",
-    objectFit: "cover",
+    objectFit: "object-fit",
   },
 };
