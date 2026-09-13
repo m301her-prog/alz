@@ -1,22 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   MessageCircle,
-  Code2,
-  Palette,
-  Music,
   Send,
   Paperclip,
   Smile,
   LogOut,
-  Menu,
-  X,
-  Search,
   Loader2,
+  Lock,
 } from "lucide-react";
-import { getRooms, getMessages, sendMessage } from "../services/chatService.js";
-
-// خريطة الأيقونات لأسماء الأيقونات المخزنة في البيانات
-const ICON_MAP = { MessageCircle, Code2, Palette, Music };
+import { getMessages, sendMessage } from "../services/chatService.js";
 
 // قائمة الإيموجي
 const EMOJIS = [
@@ -35,48 +27,39 @@ function formatTime(isoString) {
 }
 
 export default function ChatRoom({ user, onLogout }) {
-  const [rooms, setRooms] = useState([]);
-  const [selectedRoom, setSelectedRoom] = useState(null);
+  // تعريف غرفة خاصة واحدة ثابتة
+  const PRIVATE_ROOM = {
+    id: "private-main-room",
+    name: "الغرفة الخاصة الآمنة",
+    description: "محادثات خاصة ومشفرة للأعضاء فقط",
+    icon: Lock,
+    color: "#3b82f6",
+  };
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [loadingRooms, setLoadingRooms] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // جلب الغرف عند التحميل
+  // جلب رسائل الغرفة الخاصة عند التحميل
   useEffect(() => {
-    async function loadRooms() {
-      try {
-        const data = await getRooms();
-        setRooms(data);
-        if (data.length > 0) {
-          setSelectedRoom(data[0]);
-        }
-      } finally {
-        setLoadingRooms(false);
-      }
-    }
-    loadRooms();
-  }, []);
-
-  // جلب رسائل الغرفة عند تغيير الغرفة المختارة
-  useEffect(() => {
-    if (!selectedRoom) return;
     async function loadMessages() {
       setLoadingMessages(true);
       try {
-        const data = await getMessages(selectedRoom.id);
+        const data = await getMessages(PRIVATE_ROOM.id);
         setMessages(data);
+      } catch (err) {
+        console.error("Error loading messages:", err);
       } finally {
         setLoadingMessages(false);
       }
     }
     loadMessages();
-  }, [selectedRoom]);
+  }, []);
 
   // التمرير لأسفل عند وصول رسائل جديدة
   useEffect(() => {
@@ -85,13 +68,15 @@ export default function ChatRoom({ user, onLogout }) {
 
   // إرسال رسالة
   async function handleSend() {
-    if (!inputText.trim() || !selectedRoom) return;
+    if (!inputText.trim()) return;
     setSendingMessage(true);
     try {
-      const newMessage = await sendMessage(selectedRoom.id, user, inputText);
+      const newMessage = await sendMessage(PRIVATE_ROOM.id, user, inputText);
       setMessages((prev) => [...prev, newMessage]);
       setInputText("");
       setShowEmoji(false);
+    } catch (err) {
+      console.error("Error sending message:", err);
     } finally {
       setSendingMessage(false);
     }
@@ -120,101 +105,56 @@ export default function ChatRoom({ user, onLogout }) {
   }
 
   return (
-    <div className="h-screen flex bg-slate-900 overflow-hidden">
-      {/* القائمة الجانبية - الغرف */}
-      <aside
-        className={`${
-          showSidebar ? "w-full md:w-80" : "w-0"
-        } md:w-80 flex-shrink-0 bg-slate-800/80 backdrop-blur-xl border-l border-slate-700/50 flex flex-col transition-all duration-300 absolute md:relative inset-y-0 right-0 z-20`}
-      >
+    <div className="h-screen flex bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 overflow-hidden font-['Cairo',sans-serif]" dir="rtl">
+      
+      {/* القائمة الجانبية المصغرة لملف المستخدم والخروج (بتصميم زجاجي فاخر) */}
+      <aside className="w-80 flex-shrink-0 bg-slate-900/40 backdrop-blur-2xl border-l border-white/10 flex flex-col shadow-2xl z-20">
+        
         {/* رأس القائمة */}
-        <div className="p-4 border-b border-slate-700/50">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <MessageCircle className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-white font-bold">غرف الدردشة</h1>
-                <p className="text-slate-400 text-xs">مرحباً، {user.name}</p>
-              </div>
+        <div className="p-5 border-b border-white/10">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 border border-white/20">
+              <Lock className="w-6 h-6 text-white" />
             </div>
-            <button
-              onClick={() => setShowSidebar(false)}
-              className="md:hidden text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* بحث */}
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="بحث عن غرفة..."
-              className="w-full bg-slate-900/60 border border-slate-700 rounded-lg py-2 pr-9 pl-3 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-none transition-all"
-            />
+            <div>
+              <h1 className="text-white font-bold text-base tracking-wide">الدردشة الخاصة</h1>
+              <p className="text-blue-400 text-xs font-medium flex items-center gap-1 mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                اتصال آمن ومميز
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* قائمة الغرف */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {loadingRooms ? (
-            <div className="flex items-center justify-center py-8 text-slate-500">
-              <Loader2 className="w-5 h-5 animate-spin" />
+        {/* معلومات الغرفة الخاصة الوحيدة */}
+        <div className="p-4 flex-1">
+          <div className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 shadow-inner">
+            <div className="w-11 h-11 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
+              <Lock className="w-5 h-5 text-blue-400" />
             </div>
-          ) : (
-            rooms.map((room) => {
-              const Icon = ICON_MAP[room.icon] || MessageCircle;
-              const isActive = selectedRoom?.id === room.id;
-              return (
-                <button
-                  key={room.id}
-                  onClick={() => {
-                    setSelectedRoom(room);
-                    setShowSidebar(false);
-                  }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-right ${
-                    isActive
-                      ? "bg-blue-500/20 border border-blue-500/40"
-                      : "hover:bg-slate-700/40 border border-transparent"
-                  }`}
-                >
-                  <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: room.color + "33" }}
-                  >
-                    <Icon className="w-5 h-5" style={{ color: room.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold text-sm truncate ${isActive ? "text-white" : "text-slate-300"}`}>
-                      {room.name}
-                    </h3>
-                    <p className="text-slate-500 text-xs truncate">{room.description}</p>
-                  </div>
-                </button>
-              );
-            })
-          )}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-sm text-white truncate">{PRIVATE_ROOM.name}</h3>
+              <p className="text-slate-400 text-xs truncate mt-0.5">{PRIVATE_ROOM.description}</p>
+            </div>
+          </div>
         </div>
 
-        {/* زر الخروج */}
-        <div className="p-3 border-t border-slate-700/50">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-900/40">
+        {/* بطاقة المستخدم وزر الخروج */}
+        <div className="p-4 border-t border-white/10 bg-slate-950/30">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-md border border-white/20"
               style={{ backgroundColor: user.color }}
             >
               {user.avatar}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold truncate">{user.name}</p>
-              <p className="text-slate-500 text-xs truncate">{user.email}</p>
+              <p className="text-white text-sm font-bold truncate">{user.name}</p>
+              <p className="text-slate-400 text-xs truncate">{user.email}</p>
             </div>
             <button
               onClick={handleLogoutClick}
-              className="text-slate-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-slate-700/40"
+              className="text-slate-400 hover:text-red-400 transition-colors p-2.5 rounded-xl hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
               title="تسجيل الخروج"
             >
               <LogOut className="w-5 h-5" />
@@ -223,47 +163,32 @@ export default function ChatRoom({ user, onLogout }) {
         </div>
       </aside>
 
-      {/* المنطقة الرئيسية - الدردشة */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* شريط علوي */}
-        <header className="bg-slate-800/60 backdrop-blur-xl border-b border-slate-700/50 px-4 py-3 flex items-center gap-3">
-          {!showSidebar && (
-            <button
-              onClick={() => setShowSidebar(true)}
-              className="md:hidden text-slate-400 hover:text-white"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          )}
-          {selectedRoom && (
-            <>
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: selectedRoom.color + "33" }}
-              >
-                {(() => {
-                  const Icon = ICON_MAP[selectedRoom.icon] || MessageCircle;
-                  return <Icon className="w-5 h-5" style={{ color: selectedRoom.color }} />;
-                })()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-white font-bold truncate">{selectedRoom.name}</h2>
-                <p className="text-slate-400 text-xs truncate">{selectedRoom.description}</p>
-              </div>
-            </>
-          )}
+      {/* المنطقة الرئيسية - محتوى الدردشة الخاصة */}
+      <main className="flex-1 flex flex-col min-w-0 relative bg-slate-900/20 backdrop-blur-xl">
+        
+        {/* شريط علوي زجاجي */}
+        <header className="bg-slate-900/40 backdrop-blur-2xl border-b border-white/10 px-6 py-4 flex items-center gap-4 shadow-sm z-10">
+          <div className="w-11 h-11 rounded-2xl bg-blue-500/20 flex items-center justify-center flex-shrink-0 border border-blue-500/30 shadow-md">
+            <Lock className="w-5 h-5 text-blue-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-white font-bold text-base truncate">{PRIVATE_ROOM.name}</h2>
+            <p className="text-slate-400 text-xs truncate">{PRIVATE_ROOM.description}</p>
+          </div>
         </header>
 
-        {/* منطقة الرسائل */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        {/* منطقة الرسائل الزجاجية */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 scroll-smooth">
           {loadingMessages ? (
-            <div className="flex items-center justify-center h-full text-slate-500">
-              <Loader2 className="w-6 h-6 animate-spin" />
+            <div className="flex items-center justify-center h-full text-slate-400">
+              <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
-              <MessageCircle className="w-12 h-12 opacity-50" />
-              <p>لا توجد رسائل بعد. كن أول من يبدأ المحادثة!</p>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+              <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+                <MessageCircle className="w-8 h-8 text-blue-400 opacity-80" />
+              </div>
+              <p className="text-sm font-medium">لا توجد رسائل في الغرفة الخاصة بعد. كن أول من يبدأ الحديث!</p>
             </div>
           ) : (
             messages.map((msg) => {
@@ -271,33 +196,33 @@ export default function ChatRoom({ user, onLogout }) {
               return (
                 <div
                   key={msg.id}
-                  className={`flex items-end gap-2 ${
+                  className={`flex items-end gap-3 ${
                     isOwn ? "flex-row-reverse" : "flex-row"
-                  } ${isOwn ? "animate-slide-in-left" : "animate-slide-in-right"}`}
+                  }`}
                 >
                   {/* الصورة الرمزية */}
                   <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                    style={{ backgroundColor: msg.color }}
+                    className="w-9 h-9 rounded-2xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-md border border-white/20"
+                    style={{ backgroundColor: msg.color || "#6366f1" }}
                   >
-                    {msg.avatar}
+                    {msg.avatar || "👤"}
                   </div>
 
-                  {/* فقاعة الرسالة */}
+                  {/* فقاعة الرسالة (زجاجية متطورة) */}
                   <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                    className={`max-w-[70%] rounded-2xl px-4.5 py-3 shadow-xl backdrop-blur-md border ${
                       isOwn
-                        ? "bg-blue-600 text-white rounded-tr-sm"
-                        : "bg-slate-700 text-slate-100 rounded-tl-sm"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-sm border-blue-400/30 shadow-blue-900/20"
+                        : "bg-slate-800/70 text-slate-100 rounded-tl-sm border-white/10"
                     }`}
                   >
                     {!isOwn && (
-                      <p className="text-xs font-semibold mb-0.5" style={{ color: msg.color }}>
+                      <p className="text-xs font-bold mb-1 tracking-wide" style={{ color: msg.color || "#60a5fa" }}>
                         {msg.userName}
                       </p>
                     )}
                     <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                    <p className={`text-[10px] mt-1 ${isOwn ? "text-blue-200" : "text-slate-400"}`}>
+                    <p className={`text-[10px] mt-1.5 text-left ${isOwn ? "text-blue-100/80" : "text-slate-400"}`}>
                       {formatTime(msg.createdAt)}
                     </p>
                   </div>
@@ -308,16 +233,17 @@ export default function ChatRoom({ user, onLogout }) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* منطقة الإدخال */}
-        <div className="border-t border-slate-700/50 bg-slate-800/60 backdrop-blur-xl p-4">
-          {/* لوحة الإيموجي */}
+        {/* منطقة إدخال الرسائل (زجاجية ومريحة للعين) */}
+        <div className="border-t border-white/10 bg-slate-900/40 backdrop-blur-2xl p-4 relative">
+          
+          {/* لوحة الإيموجي الزجاجية المنبثقة */}
           {showEmoji && (
-            <div className="mb-3 bg-slate-900/80 rounded-xl border border-slate-700/50 p-3 grid grid-cols-8 gap-1 animate-fade-in">
+            <div className="absolute bottom-full mb-3 right-4 bg-slate-950/90 backdrop-blur-2xl rounded-2xl border border-white/15 p-3.5 grid grid-cols-8 gap-1.5 shadow-2xl z-30">
               {EMOJIS.map((emoji, i) => (
                 <button
                   key={i}
                   onClick={() => handleEmojiClick(emoji)}
-                  className="text-xl hover:bg-slate-700/50 rounded-lg p-1.5 transition-colors"
+                  className="text-xl hover:bg-white/10 rounded-xl p-2 transition-all text-center"
                 >
                   {emoji}
                 </button>
@@ -325,11 +251,12 @@ export default function ChatRoom({ user, onLogout }) {
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 max-w-5xl mx-auto">
+            
             {/* زر إرفاق ملفات */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="text-slate-400 hover:text-white p-2.5 rounded-xl hover:bg-slate-700/40 transition-colors flex-shrink-0"
+              className="text-slate-400 hover:text-white p-3 rounded-2xl hover:bg-white/10 transition-all flex-shrink-0 border border-transparent hover:border-white/10"
               title="إرفاق ملف"
             >
               <Paperclip className="w-5 h-5" />
@@ -344,29 +271,31 @@ export default function ChatRoom({ user, onLogout }) {
             {/* زر الإيموجي */}
             <button
               onClick={() => setShowEmoji(!showEmoji)}
-              className={`p-2.5 rounded-xl transition-colors flex-shrink-0 ${
-                showEmoji ? "text-blue-400 bg-blue-500/10" : "text-slate-400 hover:text-white hover:bg-slate-700/40"
+              className={`p-3 rounded-2xl transition-all flex-shrink-0 border ${
+                showEmoji
+                  ? "text-blue-400 bg-blue-500/15 border-blue-500/30"
+                  : "text-slate-400 hover:text-white hover:bg-white/10 border-transparent hover:border-white/10"
               }`}
               title="إيموجي"
             >
               <Smile className="w-5 h-5" />
             </button>
 
-            {/* حقل الإدخال */}
+            {/* حقل الإدخال الزجاجي */}
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="اكتب رسالتك هنا..."
-              className="flex-1 bg-slate-900/60 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+              placeholder="اكتب رسالتك الخاصة هنا..."
+              className="flex-1 bg-white/5 border border-white/10 rounded-2xl py-3.5 px-5 text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/15 outline-none transition-all shadow-inner text-sm"
             />
 
-            {/* زر الإرسال */}
+            {/* زر الإرسال المتطور */}
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || sendingMessage}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-3 rounded-xl transition-all shadow-lg shadow-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white p-3.5 rounded-2xl transition-all shadow-lg shadow-blue-600/30 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 border border-blue-400/30"
               title="إرسال"
             >
               {sendingMessage ? (
@@ -377,6 +306,7 @@ export default function ChatRoom({ user, onLogout }) {
             </button>
           </div>
         </div>
+
       </main>
     </div>
   );
