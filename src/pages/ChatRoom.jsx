@@ -10,7 +10,8 @@ import {
   Lock,
   Search,
 } from "lucide-react";
-import { getMessages, sendMessage } from "../services/chatService.js";
+// الاستيراد الصحيح من ملف الخدمات الذي أرسلته
+import { getUsers, getRoomMessages, sendMessage } from "../services/chatService.js";
 
 const EMOJIS = [
   "😀", "😂", "😍", "🥰", "😎", "🤔", "😴", "🥳",
@@ -41,16 +42,11 @@ export default function ChatRoom({ user, onLogout }) {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // جلب كافة الحسابات المسجلة من الـ API بدقة
+  // جلب كافة الحسابات المسجلة عبر دالة getUsers من ملف الخدمات
   useEffect(() => {
-    async function fetchUsers() {
+    async function fetchAllUsers() {
       try {
-        const response = await fetch('https://alz-taupe.vercel.app/api/users');
-        const data = await response.json();
-        
-        const rawUsers = Array.isArray(data) ? data : data.users || [];
-        
-        // استثناء المستخدم الحالي من القائمة لكي لا يظهر لنفسه
+        const rawUsers = await getUsers();
         const otherUsers = rawUsers.filter((u) => u.id !== user.id);
         
         setUsersList(otherUsers);
@@ -63,13 +59,14 @@ export default function ChatRoom({ user, onLogout }) {
         setLoadingUsers(false);
       }
     }
-    fetchUsers();
+    fetchAllUsers();
   }, [user.id]);
 
   const getPrivateRoomId = (userId1, userId2) => {
     return [userId1, userId2].sort().join("_private_chat_");
   };
 
+  // جلب رسائل الغرفة عبر دالة getRoomMessages من ملف الخدمات
   useEffect(() => {
     if (!selectedUser) return;
 
@@ -77,8 +74,8 @@ export default function ChatRoom({ user, onLogout }) {
       setLoadingMessages(true);
       try {
         const roomId = getPrivateRoomId(user.id, selectedUser.id);
-        const data = await getMessages(roomId);
-        setMessages(Array.isArray(data) ? data : []);
+        const data = await getRoomMessages(roomId, user.id);
+        setMessages(Array.isArray(data) ? data : data.messages || []);
       } catch (err) {
         console.error("Error loading private messages:", err);
       } finally {
@@ -92,13 +89,16 @@ export default function ChatRoom({ user, onLogout }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // إرسال الرسالة عبر دالة sendMessage من ملف الخدمات
   async function handleSend() {
     if (!inputText.trim() || !selectedUser) return;
     setSendingMessage(true);
     try {
       const roomId = getPrivateRoomId(user.id, selectedUser.id);
-      const newMessage = await sendMessage(roomId, user, inputText);
-      setMessages((prev) => [...prev, newMessage]);
+      const res = await sendMessage(roomId, user.id, inputText);
+      const newMsg = res.message || res;
+      
+      setMessages((prev) => [...prev, newMsg]);
       setInputText("");
       setShowEmoji(false);
     } catch (err) {
@@ -132,52 +132,466 @@ export default function ChatRoom({ user, onLogout }) {
   );
 
   return (
-    <div className="h-screen w-screen flex bg-[#0f172a] text-slate-100 font-['Cairo',sans-serif] overflow-hidden" dir="rtl">
-      
-      {/* القائمة الجانبية (Sidebar) لعرض الحسابات */}
-      <aside className="w-80 lg:w-96 bg-[#1e293b]/80 backdrop-blur-xl border-l border-slate-700/50 flex flex-col shadow-2xl z-20 flex-shrink-0">
-        
-        <div className="p-5 border-b border-slate-700/50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-bold text-base text-white tracking-wide">الرسائل الخاصة</h1>
-              <p className="text-xs text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                متاح للمراسلة الفورية
-              </p>
-            </div>
+    <div className="chat-container" dir="rtl">
+      {/* تنسيقات CSS النقية لضمان مظهر راقي واحترافي */}
+      <style>{`
+        .chat-container {
+          display: flex;
+          height: 100vh;
+          width: 100vw;
+          background-color: #0b0f19;
+          color: #f1f5f9;
+          font-family: 'Cairo', sans-serif;
+          overflow: hidden;
+        }
+
+        /* Sidebar */
+        .chat-sidebar {
+          width: 320px;
+          background-color: #111827;
+          border-left: 1px solid #1f2937;
+          display: flex;
+          flex-direction: column;
+          flex-shrink: 0;
+          box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+          z-index: 20;
+        }
+
+        .sidebar-header {
+          padding: 20px;
+          border-bottom: 1px solid #1f2937;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .sidebar-icon-box {
+          width: 44px;
+          height: 44px;
+          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .sidebar-title {
+          font-weight: 700;
+          font-size: 15px;
+          color: #ffffff;
+          margin: 0;
+        }
+
+        .sidebar-status {
+          font-size: 11px;
+          color: #10b981;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 3px;
+        }
+
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          background-color: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 8px #10b981;
+        }
+
+        /* Search Box */
+        .search-box-wrapper {
+          padding: 16px 16px 8px 16px;
+        }
+
+        .search-input-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .search-icon {
+          position: absolute;
+          right: 14px;
+          color: #64748b;
+          width: 16px;
+          height: 16px;
+        }
+
+        .search-input {
+          width: 100%;
+          background-color: #1f2937;
+          border: 1px solid #374151;
+          border-radius: 12px;
+          padding: 10px 40px 10px 14px;
+          font-size: 12px;
+          color: #fff;
+          outline: none;
+          transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Users List */
+        .users-list {
+          padding: 12px;
+          flex: 1;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .user-card {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 14px;
+          border: 1px solid transparent;
+          background-color: transparent;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: right;
+        }
+
+        .user-card:hover {
+          background-color: #1f2937;
+          border-color: #374151;
+        }
+
+        .user-card.active {
+          background-color: rgba(99, 102, 241, 0.12);
+          border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .user-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          font-weight: bold;
+          font-size: 14px;
+          flex-shrink: 0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .user-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .user-name {
+          font-weight: 600;
+          font-size: 13px;
+          color: #f8fafc;
+          margin: 0 0 2px 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .user-email {
+          font-size: 11px;
+          color: #94a3b8;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        /* Current User Profile Footer */
+        .current-user-footer {
+          padding: 16px;
+          border-top: 1px solid #1f2937;
+          background-color: #0d1322;
+        }
+
+        .current-user-box {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px;
+          background-color: #1f2937;
+          border-radius: 12px;
+          border: 1px solid #374151;
+        }
+
+        .logout-btn {
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 8px;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .logout-btn:hover {
+          color: #ef4444;
+          background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Main Chat Window */
+        .chat-main {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          background-color: #070a12;
+          position: relative;
+        }
+
+        .chat-header {
+          background-color: #111827;
+          border-bottom: 1px solid #1f2937;
+          padding: 16px 24px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* Messages Area */
+        .messages-area {
+          flex: 1;
+          overflow-y: auto;
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .message-row {
+          display: flex;
+          align-items: flex-end;
+          gap: 10px;
+        }
+
+        .message-row.own {
+          flex-direction: row-reverse;
+        }
+
+        .msg-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          font-size: 11px;
+          font-weight: bold;
+          flex-shrink: 0;
+        }
+
+        .message-bubble {
+          max-width: 65%;
+          padding: 12px 16px;
+          border-radius: 16px;
+          font-size: 13px;
+          line-height: 1.6;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          border: 1px solid transparent;
+          word-break: break-word;
+        }
+
+        .message-bubble.own {
+          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          color: #ffffff;
+          border-top-right-radius: 4px;
+          border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .message-bubble.other {
+          background-color: #1f2937;
+          color: #f1f5f9;
+          border-top-left-radius: 4px;
+          border-color: #374151;
+        }
+
+        .message-time {
+          font-size: 10px;
+          margin-top: 6px;
+          display: block;
+          text-align: left;
+          opacity: 0.7;
+        }
+
+        /* Input Area */
+        .chat-input-footer {
+          border-top: 1px solid #1f2937;
+          background-color: #111827;
+          padding: 16px 24px;
+          position: relative;
+        }
+
+        .emoji-picker-popup {
+          position: absolute;
+          bottom: calc(100% + 12px);
+          right: 24px;
+          background-color: #111827;
+          border: 1px solid #374151;
+          border-radius: 16px;
+          padding: 12px;
+          display: grid;
+          grid-template-columns: repeat(8, 1fr);
+          gap: 6px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+          z-index: 30;
+        }
+
+        .emoji-btn {
+          background: none;
+          border: none;
+          font-size: 18px;
+          cursor: pointer;
+          padding: 6px;
+          border-radius: 8px;
+          transition: background 0.2s;
+        }
+
+        .emoji-btn:hover {
+          background-color: #1f2937;
+        }
+
+        .input-toolbar {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+
+        .toolbar-btn {
+          background: none;
+          border: 1px solid transparent;
+          color: #94a3b8;
+          cursor: pointer;
+          padding: 10px;
+          border-radius: 12px;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .toolbar-btn:hover {
+          color: #fff;
+          background-color: #1f2937;
+          border-color: #374151;
+        }
+
+        .toolbar-btn.active {
+          color: #6366f1;
+          background-color: rgba(99, 102, 241, 0.15);
+          border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .main-text-input {
+          flex: 1;
+          background-color: #1f2937;
+          border: 1px solid #374151;
+          border-radius: 12px;
+          padding: 12px 16px;
+          font-size: 13px;
+          color: #fff;
+          outline: none;
+          transition: all 0.3s;
+        }
+
+        .main-text-input:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .send-btn {
+          background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+          border: 1px solid rgba(99, 102, 241, 0.4);
+          color: #fff;
+          cursor: pointer;
+          padding: 12px 16px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .send-btn:hover:not(:disabled) {
+          opacity: 0.9;
+          transform: translateY(-1px);
+        }
+
+        .send-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .center-loader, .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          color: #64748b;
+          gap: 12px;
+          text-align: center;
+          font-size: 13px;
+        }
+      `}</style>
+
+      {/* القائمة الجانبية */}
+      <aside className="chat-sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-icon-box">
+            <Users size={22} />
+          </div>
+          <div>
+            <h1 className="sidebar-title">الرسائل الخاصة</h1>
+            <span className="sidebar-status">
+              <span className="status-dot"></span>
+              متصل الآن
+            </span>
           </div>
         </div>
 
         {/* خانة البحث */}
-        <div className="p-4 pb-2">
-          <div className="relative">
-            <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
-              <Search className="w-4 h-4" />
-            </span>
+        <div className="search-box-wrapper">
+          <div className="search-input-container">
+            <Search className="search-icon" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ابحث عن مستخدم بالاسم أو البريد..."
-              className="w-full bg-[#0f172a]/60 border border-slate-700/60 rounded-xl py-2.5 pr-10 pl-4 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+              className="search-input"
             />
           </div>
         </div>
 
-        {/* قائمة الأعضاء مع تصحيح عرض البريد الخاص بكل مستخدم (u.email) */}
-        <div className="p-3 flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+        {/* قائمة المستخدمين */}
+        <div className="users-list">
           {loadingUsers ? (
-            <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-400">
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-              <p className="text-xs">جاري تحميل الحسابات...</p>
+            <div className="center-loader">
+              <Loader2 className="animate-spin" size={24} color="#6366f1" />
+              <p>جاري تحميل الحسابات...</p>
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 text-xs">
-              لا توجد حسابات مطابقة للبحث
+            <div className="center-loader">
+              <p>لا توجد حسابات مطابقة</p>
             </div>
           ) : (
             filteredUsers.map((u) => {
@@ -186,26 +600,17 @@ export default function ChatRoom({ user, onLogout }) {
                 <button
                   key={u.id}
                   onClick={() => setSelectedUser(u)}
-                  className={`w-full flex items-center gap-3.5 p-3 rounded-2xl transition-all border text-right group ${
-                    isSelected
-                      ? "bg-indigo-600/20 border-indigo-500/50 shadow-lg shadow-indigo-500/10"
-                      : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800/80 hover:border-slate-600"
-                  }`}
+                  className={`user-card ${isSelected ? "active" : ""}`}
                 >
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-md border border-white/10"
-                    style={{ backgroundColor: u.color || "#4f46e5" }}
+                    className="user-avatar"
+                    style={{ backgroundColor: u.color || "#6366f1" }}
                   >
                     {u.avatar || u.name?.charAt(0) || "👤"}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm text-slate-100 truncate group-hover:text-indigo-300 transition-colors">
-                      {u.name || "مستخدم بدون اسم"}
-                    </h3>
-                    {/* تم التعديل هنا ليعرض إيميل العضو (u.email) وليس إيميلك الشخصي */}
-                    <p className="text-slate-400 text-xs truncate mt-0.5">
-                      {u.email || "لا يوجد بريد إلكتروني"}
-                    </p>
+                  <div className="user-info">
+                    <h3 className="user-name">{u.name || "مستخدم بدون اسم"}</h3>
+                    <p className="user-email">{u.email || "لا يوجد بريد"}</p>
                   </div>
                 </button>
               );
@@ -213,89 +618,75 @@ export default function ChatRoom({ user, onLogout }) {
           )}
         </div>
 
-        {/* بطاقة المستخدم الحالي في أسفل القائمة */}
-        <div className="p-4 border-t border-slate-700/50 bg-[#0f172a]/50">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60 shadow-inner">
+        {/* معلومات المستخدم الحالي */}
+        <div className="current-user-footer">
+          <div className="current-user-box">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow border border-white/10"
-              style={{ backgroundColor: user.color || "#4f46e5" }}
+              className="user-avatar"
+              style={{ width: "36px", height: "36px", backgroundColor: user.color || "#6366f1" }}
             >
               {user.avatar || user.name?.charAt(0) || "👤"}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-bold truncate">{user.name}</p>
-              <p className="text-slate-400 text-[10px] truncate">{user.email}</p>
+            <div className="user-info">
+              <p className="user-name">{user.name}</p>
+              <p className="user-email">{user.email}</p>
             </div>
-            <button
-              onClick={onLogout}
-              className="text-slate-400 hover:text-red-400 transition-colors p-2 rounded-xl hover:bg-red-500/10"
-              title="تسجيل الخروج"
-            >
-              <LogOut className="w-5 h-5" />
+            <button onClick={onLogout} className="logout-btn" title="تسجيل الخروج">
+              <LogOut size={18} />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* نافذة الشات الرئيسية */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#0b1329] relative">
-        
+      {/* نافذة المحادثة */}
+      <main className="chat-main">
         {selectedUser ? (
           <>
-            <header className="bg-[#1e293b]/80 backdrop-blur-xl border-b border-slate-700/50 px-6 py-4 flex items-center gap-4 shadow-sm z-10">
+            <header className="chat-header">
               <div
-                className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-md border border-white/10 flex-shrink-0"
-                style={{ backgroundColor: selectedUser.color || "#4f46e5" }}
+                className="user-avatar"
+                style={{ backgroundColor: selectedUser.color || "#6366f1" }}
               >
                 {selectedUser.avatar || selectedUser.name?.charAt(0) || "👤"}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-white font-bold text-sm sm:text-base truncate">{selectedUser.name}</h2>
-                  <Lock className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+              <div className="user-info">
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <h2 className="user-name" style={{ fontSize: "15px" }}>{selectedUser.name}</h2>
+                  <Lock size={14} color="#818cf8" />
                 </div>
-                <p className="text-slate-400 text-xs truncate mt-0.5">{selectedUser.email}</p>
+                <p className="user-email">{selectedUser.email}</p>
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+            <div className="messages-area">
               {loadingMessages ? (
-                <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
-                  <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
-                  <p className="text-xs">جاري تحميل الرسائل...</p>
+                <div className="center-loader">
+                  <Loader2 className="animate-spin" size={28} color="#6366f1" />
+                  <p>جاري تحميل الرسائل...</p>
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                  <div className="w-16 h-16 rounded-3xl bg-slate-800/50 border border-slate-700/50 flex items-center justify-center shadow-inner">
-                    <MessageCircle className="w-8 h-8 text-indigo-400 opacity-80" />
+                <div className="empty-state">
+                  <div style={{ padding: "16px", backgroundColor: "#1f2937", borderRadius: "16px" }}>
+                    <MessageCircle size={32} color="#818cf8" />
                   </div>
-                  <p className="text-xs sm:text-sm font-medium">ابدأ أول محادثة خاصة الآن مع {selectedUser.name}</p>
+                  <p>ابدأ أول محادثة خاصة الآن مع {selectedUser.name}</p>
                 </div>
               ) : (
                 messages.map((msg) => {
                   const isOwn = msg.userId === user.id;
                   return (
-                    <div
-                      key={msg.id || Math.random()}
-                      className={`flex items-end gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
-                    >
+                    <div key={msg.id || Math.random()} className={`message-row ${isOwn ? "own" : ""}`}>
                       <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow border border-white/10"
-                        style={{ backgroundColor: msg.color || (isOwn ? user.color : selectedUser.color) || "#4f46e5" }}
+                        className="msg-avatar"
+                        style={{ backgroundColor: msg.color || (isOwn ? user.color : selectedUser.color) || "#6366f1" }}
                       >
                         {msg.avatar || "👤"}
                       </div>
-                      <div
-                        className={`max-w-[75%] sm:max-w-[60%] rounded-2xl px-4 py-3 shadow-xl backdrop-blur-md border text-xs sm:text-sm ${
-                          isOwn
-                            ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-tr-sm border-indigo-400/30 shadow-indigo-950/40"
-                            : "bg-slate-800/80 text-slate-100 rounded-tl-sm border-slate-700/60"
-                        }`}
-                      >
-                        <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
-                        <p className={`text-[10px] mt-1.5 text-left ${isOwn ? "text-indigo-100/70" : "text-slate-400"}`}>
+                      <div className={`message-bubble ${isOwn ? "own" : "other"}`}>
+                        <p style={{ margin: 0 }}>{msg.text}</p>
+                        <span className="message-time">
                           {formatTime(msg.createdAt || new Date())}
-                        </p>
+                        </span>
                       </div>
                     </div>
                   );
@@ -304,14 +695,14 @@ export default function ChatRoom({ user, onLogout }) {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-slate-700/50 bg-[#1e293b]/80 backdrop-blur-xl p-4 relative">
+            <div className="chat-input-footer">
               {showEmoji && (
-                <div className="absolute bottom-full mb-3 right-4 bg-[#0f172a]/95 backdrop-blur-2xl rounded-2xl border border-slate-700/80 p-3 grid grid-cols-8 gap-1.5 shadow-2xl z-30">
+                <div className="emoji-picker-popup">
                   {EMOJIS.map((emoji, i) => (
                     <button
                       key={i}
                       onClick={() => handleEmojiClick(emoji)}
-                      className="text-lg hover:bg-slate-800 rounded-lg p-2 transition-all text-center"
+                      className="emoji-btn"
                     >
                       {emoji}
                     </button>
@@ -319,31 +710,27 @@ export default function ChatRoom({ user, onLogout }) {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 max-w-4xl mx-auto">
+              <div className="input-toolbar">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-slate-400 hover:text-white p-2.5 rounded-xl hover:bg-slate-800 transition-all border border-transparent hover:border-slate-700 flex-shrink-0"
+                  className="toolbar-btn"
                   title="إرفاق ملف"
                 >
-                  <Paperclip className="w-5 h-5" />
+                  <Paperclip size={20} />
                 </button>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  className="hidden"
+                  style={{ display: "none" }}
                   onChange={handleFileSelect}
                 />
 
                 <button
                   onClick={() => setShowEmoji(!showEmoji)}
-                  className={`p-2.5 rounded-xl transition-all flex-shrink-0 border ${
-                    showEmoji
-                      ? "text-indigo-400 bg-indigo-500/15 border-indigo-500/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800 border-transparent hover:border-slate-700"
-                  }`}
+                  className={`toolbar-btn ${showEmoji ? "active" : ""}`}
                   title="إيموجي"
                 >
-                  <Smile className="w-5 h-5" />
+                  <Smile size={20} />
                 </button>
 
                 <input
@@ -352,31 +739,30 @@ export default function ChatRoom({ user, onLogout }) {
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={`اكتب رسالة خاصة إلى ${selectedUser.name}...`}
-                  className="flex-1 bg-[#0f172a]/70 border border-slate-700/60 rounded-xl py-3 px-4 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                  className="main-text-input"
                 />
 
                 <button
                   onClick={handleSend}
                   disabled={!inputText.trim() || sendingMessage}
-                  className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white p-3 rounded-xl transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 border border-indigo-400/30"
+                  className="send-btn"
                   title="إرسال"
                 >
                   {sendingMessage ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="animate-spin" size={20} />
                   ) : (
-                    <Send className="w-5 h-5" />
+                    <Send size={20} />
                   )}
                 </button>
               </div>
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-            <Users className="w-12 h-12 opacity-40" />
-            <p className="text-sm font-medium">الرجاء اختيار مستخدم من القائمة الجانبية لبدء المحادثة الخاصة</p>
+          <div className="empty-state">
+            <Users size={48} style={{ opacity: 0.3 }} />
+            <p>الرجاء اختيار مستخدم من القائمة الجانبية لبدء المحادثة الخاصة</p>
           </div>
         )}
-
       </main>
     </div>
   );
