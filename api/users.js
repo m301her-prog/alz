@@ -1,4 +1,4 @@
-import pool from '../../lib/db.js'; // أو المسار الصحيح لقاعدة البيانات لديك
+import pool from './lib/db.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -6,7 +6,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // جلب كافة المستخدمين المسجلين في قاعدة البيانات
     const allUsers = await pool.query(
       `SELECT id, name, email, avatar, color, created_at FROM users ORDER BY created_at DESC`
     );
