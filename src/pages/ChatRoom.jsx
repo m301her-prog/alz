@@ -41,14 +41,13 @@ export default function ChatRoom({ user, onLogout }) {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // جلب كافة الحسابات المسجلة من الـ API بدقة لأي عدد من المستخدمين
+  // جلب كافة الحسابات المسجلة من الـ API بدقة
   useEffect(() => {
     async function fetchUsers() {
       try {
         const response = await fetch('https://alz-taupe.vercel.app/api/users');
         const data = await response.json();
         
-        // التحقق من صيغة البيانات القادمة سواء كانت مصفوفة مباشرة أو داخل كائن
         const rawUsers = Array.isArray(data) ? data : data.users || [];
         
         // استثناء المستخدم الحالي من القائمة لكي لا يظهر لنفسه
@@ -67,12 +66,10 @@ export default function ChatRoom({ user, onLogout }) {
     fetchUsers();
   }, [user.id]);
 
-  // إنشاء معرف غرفة خاصة فريد وثابت بين أي مستخدمين اثنين
   const getPrivateRoomId = (userId1, userId2) => {
     return [userId1, userId2].sort().join("_private_chat_");
   };
 
-  // جلب رسائل المحادثة الخاصة عند اختيار مستخدم
   useEffect(() => {
     if (!selectedUser) return;
 
@@ -129,7 +126,6 @@ export default function ChatRoom({ user, onLogout }) {
     }
   }
 
-  // تصفية المستخدمين بناءً على البحث
   const filteredUsers = usersList.filter((u) => 
     (u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
@@ -141,7 +137,6 @@ export default function ChatRoom({ user, onLogout }) {
       {/* القائمة الجانبية (Sidebar) لعرض الحسابات */}
       <aside className="w-80 lg:w-96 bg-[#1e293b]/80 backdrop-blur-xl border-l border-slate-700/50 flex flex-col shadow-2xl z-20 flex-shrink-0">
         
-        {/* رأس القائمة */}
         <div className="p-5 border-b border-slate-700/50 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white font-bold">
@@ -157,7 +152,7 @@ export default function ChatRoom({ user, onLogout }) {
           </div>
         </div>
 
-        {/* خانة البحث عن مستخدم */}
+        {/* خانة البحث */}
         <div className="p-4 pb-2">
           <div className="relative">
             <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
@@ -173,7 +168,7 @@ export default function ChatRoom({ user, onLogout }) {
           </div>
         </div>
 
-        {/* قائمة الأعضاء */}
+        {/* قائمة الأعضاء مع تصحيح عرض البريد الخاص بكل مستخدم (u.email) */}
         <div className="p-3 flex-1 overflow-y-auto space-y-2 custom-scrollbar">
           {loadingUsers ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-400">
@@ -207,6 +202,7 @@ export default function ChatRoom({ user, onLogout }) {
                     <h3 className="font-bold text-sm text-slate-100 truncate group-hover:text-indigo-300 transition-colors">
                       {u.name || "مستخدم بدون اسم"}
                     </h3>
+                    {/* تم التعديل هنا ليعرض إيميل العضو (u.email) وليس إيميلك الشخصي */}
                     <p className="text-slate-400 text-xs truncate mt-0.5">
                       {u.email || "لا يوجد بريد إلكتروني"}
                     </p>
@@ -217,7 +213,7 @@ export default function ChatRoom({ user, onLogout }) {
           )}
         </div>
 
-        {/* بطاقة المستخدم الحالي وزر الخروج */}
+        {/* بطاقة المستخدم الحالي في أسفل القائمة */}
         <div className="p-4 border-t border-slate-700/50 bg-[#0f172a]/50">
           <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60 shadow-inner">
             <div
@@ -246,7 +242,6 @@ export default function ChatRoom({ user, onLogout }) {
         
         {selectedUser ? (
           <>
-            {/* شريط علوي للمحادثة الخاصة */}
             <header className="bg-[#1e293b]/80 backdrop-blur-xl border-b border-slate-700/50 px-6 py-4 flex items-center gap-4 shadow-sm z-10">
               <div
                 className="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-md border border-white/10 flex-shrink-0"
@@ -263,7 +258,6 @@ export default function ChatRoom({ user, onLogout }) {
               </div>
             </header>
 
-            {/* رسائل المحادثة */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
               {loadingMessages ? (
                 <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
@@ -310,7 +304,6 @@ export default function ChatRoom({ user, onLogout }) {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* شريط إدخال الرسائل */}
             <div className="border-t border-slate-700/50 bg-[#1e293b]/80 backdrop-blur-xl p-4 relative">
               {showEmoji && (
                 <div className="absolute bottom-full mb-3 right-4 bg-[#0f172a]/95 backdrop-blur-2xl rounded-2xl border border-slate-700/80 p-3 grid grid-cols-8 gap-1.5 shadow-2xl z-30">
