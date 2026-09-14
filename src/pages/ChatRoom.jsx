@@ -10,8 +10,8 @@ import {
   Lock,
   Search,
 } from "lucide-react";
-// الاستيراد الصحيح من ملف الخدمات الذي أرسلته
-import { getUsers, getRoomMessages, sendMessage } from "../services/chatService.js";
+// تم استيراد الدوال الموجودة فعلياً في ملف الخدمات
+import { getRoomMessages, sendMessage } from "../services/chatService.js";
 
 const EMOJIS = [
   "😀", "😂", "😍", "🥰", "😎", "🤔", "😴", "🥳",
@@ -42,11 +42,14 @@ export default function ChatRoom({ user, onLogout }) {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // جلب كافة الحسابات المسجلة عبر دالة getUsers من ملف الخدمات
+  // جلب الحسابات مباشرة لتجنب أي مشاكل في التصدير
   useEffect(() => {
-    async function fetchAllUsers() {
+    async function fetchUsers() {
       try {
-        const rawUsers = await getUsers();
+        const response = await fetch('https://alz-taupe.vercel.app/api/users');
+        const data = await response.json();
+        
+        const rawUsers = Array.isArray(data) ? data : data.users || [];
         const otherUsers = rawUsers.filter((u) => u.id !== user.id);
         
         setUsersList(otherUsers);
@@ -59,14 +62,13 @@ export default function ChatRoom({ user, onLogout }) {
         setLoadingUsers(false);
       }
     }
-    fetchAllUsers();
+    fetchUsers();
   }, [user.id]);
 
   const getPrivateRoomId = (userId1, userId2) => {
     return [userId1, userId2].sort().join("_private_chat_");
   };
 
-  // جلب رسائل الغرفة عبر دالة getRoomMessages من ملف الخدمات
   useEffect(() => {
     if (!selectedUser) return;
 
@@ -89,7 +91,6 @@ export default function ChatRoom({ user, onLogout }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // إرسال الرسالة عبر دالة sendMessage من ملف الخدمات
   async function handleSend() {
     if (!inputText.trim() || !selectedUser) return;
     setSendingMessage(true);
@@ -133,7 +134,6 @@ export default function ChatRoom({ user, onLogout }) {
 
   return (
     <div className="chat-container" dir="rtl">
-      {/* تنسيقات CSS النقية لضمان مظهر راقي واحترافي */}
       <style>{`
         .chat-container {
           display: flex;
@@ -144,8 +144,6 @@ export default function ChatRoom({ user, onLogout }) {
           font-family: 'Cairo', sans-serif;
           overflow: hidden;
         }
-
-        /* Sidebar */
         .chat-sidebar {
           width: 320px;
           background-color: #111827;
@@ -156,7 +154,6 @@ export default function ChatRoom({ user, onLogout }) {
           box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
           z-index: 20;
         }
-
         .sidebar-header {
           padding: 20px;
           border-bottom: 1px solid #1f2937;
@@ -164,7 +161,6 @@ export default function ChatRoom({ user, onLogout }) {
           align-items: center;
           gap: 12px;
         }
-
         .sidebar-icon-box {
           width: 44px;
           height: 44px;
@@ -176,14 +172,12 @@ export default function ChatRoom({ user, onLogout }) {
           color: #fff;
           box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
-
         .sidebar-title {
           font-weight: 700;
           font-size: 15px;
           color: #ffffff;
           margin: 0;
         }
-
         .sidebar-status {
           font-size: 11px;
           color: #10b981;
@@ -192,7 +186,6 @@ export default function ChatRoom({ user, onLogout }) {
           gap: 6px;
           margin-top: 3px;
         }
-
         .status-dot {
           width: 8px;
           height: 8px;
@@ -200,18 +193,14 @@ export default function ChatRoom({ user, onLogout }) {
           border-radius: 50%;
           box-shadow: 0 0 8px #10b981;
         }
-
-        /* Search Box */
         .search-box-wrapper {
           padding: 16px 16px 8px 16px;
         }
-
         .search-input-container {
           position: relative;
           display: flex;
           align-items: center;
         }
-
         .search-icon {
           position: absolute;
           right: 14px;
@@ -219,7 +208,6 @@ export default function ChatRoom({ user, onLogout }) {
           width: 16px;
           height: 16px;
         }
-
         .search-input {
           width: 100%;
           background-color: #1f2937;
@@ -231,13 +219,10 @@ export default function ChatRoom({ user, onLogout }) {
           outline: none;
           transition: all 0.3s ease;
         }
-
         .search-input:focus {
           border-color: #6366f1;
           box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
-
-        /* Users List */
         .users-list {
           padding: 12px;
           flex: 1;
@@ -246,7 +231,6 @@ export default function ChatRoom({ user, onLogout }) {
           flex-direction: column;
           gap: 8px;
         }
-
         .user-card {
           width: 100%;
           display: flex;
@@ -260,17 +244,14 @@ export default function ChatRoom({ user, onLogout }) {
           transition: all 0.2s ease;
           text-align: right;
         }
-
         .user-card:hover {
           background-color: #1f2937;
           border-color: #374151;
         }
-
         .user-card.active {
           background-color: rgba(99, 102, 241, 0.12);
           border-color: rgba(99, 102, 241, 0.4);
         }
-
         .user-avatar {
           width: 40px;
           height: 40px;
@@ -284,12 +265,10 @@ export default function ChatRoom({ user, onLogout }) {
           flex-shrink: 0;
           box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
-
         .user-info {
           flex: 1;
           min-width: 0;
         }
-
         .user-name {
           font-weight: 600;
           font-size: 13px;
@@ -299,7 +278,6 @@ export default function ChatRoom({ user, onLogout }) {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-
         .user-email {
           font-size: 11px;
           color: #94a3b8;
@@ -308,14 +286,11 @@ export default function ChatRoom({ user, onLogout }) {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-
-        /* Current User Profile Footer */
         .current-user-footer {
           padding: 16px;
           border-top: 1px solid #1f2937;
           background-color: #0d1322;
         }
-
         .current-user-box {
           display: flex;
           align-items: center;
@@ -325,7 +300,6 @@ export default function ChatRoom({ user, onLogout }) {
           border-radius: 12px;
           border: 1px solid #374151;
         }
-
         .logout-btn {
           background: none;
           border: none;
@@ -338,13 +312,10 @@ export default function ChatRoom({ user, onLogout }) {
           align-items: center;
           justify-content: center;
         }
-
         .logout-btn:hover {
           color: #ef4444;
           background-color: rgba(239, 68, 68, 0.1);
         }
-
-        /* Main Chat Window */
         .chat-main {
           flex: 1;
           display: flex;
@@ -352,7 +323,6 @@ export default function ChatRoom({ user, onLogout }) {
           background-color: #070a12;
           position: relative;
         }
-
         .chat-header {
           background-color: #111827;
           border-bottom: 1px solid #1f2937;
@@ -362,8 +332,6 @@ export default function ChatRoom({ user, onLogout }) {
           gap: 16px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-
-        /* Messages Area */
         .messages-area {
           flex: 1;
           overflow-y: auto;
@@ -372,17 +340,14 @@ export default function ChatRoom({ user, onLogout }) {
           flex-direction: column;
           gap: 16px;
         }
-
         .message-row {
           display: flex;
           align-items: flex-end;
           gap: 10px;
         }
-
         .message-row.own {
           flex-direction: row-reverse;
         }
-
         .msg-avatar {
           width: 32px;
           height: 32px;
@@ -395,7 +360,6 @@ export default function ChatRoom({ user, onLogout }) {
           font-weight: bold;
           flex-shrink: 0;
         }
-
         .message-bubble {
           max-width: 65%;
           padding: 12px 16px;
@@ -406,21 +370,18 @@ export default function ChatRoom({ user, onLogout }) {
           border: 1px solid transparent;
           word-break: break-word;
         }
-
         .message-bubble.own {
           background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
           color: #ffffff;
           border-top-right-radius: 4px;
           border-color: rgba(99, 102, 241, 0.3);
         }
-
         .message-bubble.other {
           background-color: #1f2937;
           color: #f1f5f9;
           border-top-left-radius: 4px;
           border-color: #374151;
         }
-
         .message-time {
           font-size: 10px;
           margin-top: 6px;
@@ -428,15 +389,12 @@ export default function ChatRoom({ user, onLogout }) {
           text-align: left;
           opacity: 0.7;
         }
-
-        /* Input Area */
         .chat-input-footer {
           border-top: 1px solid #1f2937;
           background-color: #111827;
           padding: 16px 24px;
           position: relative;
         }
-
         .emoji-picker-popup {
           position: absolute;
           bottom: calc(100% + 12px);
@@ -451,7 +409,6 @@ export default function ChatRoom({ user, onLogout }) {
           box-shadow: 0 10px 30px rgba(0,0,0,0.5);
           z-index: 30;
         }
-
         .emoji-btn {
           background: none;
           border: none;
@@ -461,11 +418,9 @@ export default function ChatRoom({ user, onLogout }) {
           border-radius: 8px;
           transition: background 0.2s;
         }
-
         .emoji-btn:hover {
           background-color: #1f2937;
         }
-
         .input-toolbar {
           display: flex;
           align-items: center;
@@ -473,7 +428,6 @@ export default function ChatRoom({ user, onLogout }) {
           max-width: 900px;
           margin: 0 auto;
         }
-
         .toolbar-btn {
           background: none;
           border: 1px solid transparent;
@@ -486,19 +440,16 @@ export default function ChatRoom({ user, onLogout }) {
           align-items: center;
           justify-content: center;
         }
-
         .toolbar-btn:hover {
           color: #fff;
           background-color: #1f2937;
           border-color: #374151;
         }
-
         .toolbar-btn.active {
           color: #6366f1;
           background-color: rgba(99, 102, 241, 0.15);
           border-color: rgba(99, 102, 241, 0.3);
         }
-
         .main-text-input {
           flex: 1;
           background-color: #1f2937;
@@ -510,12 +461,10 @@ export default function ChatRoom({ user, onLogout }) {
           outline: none;
           transition: all 0.3s;
         }
-
         .main-text-input:focus {
           border-color: #6366f1;
           box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
-
         .send-btn {
           background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
           border: 1px solid rgba(99, 102, 241, 0.4);
@@ -529,17 +478,14 @@ export default function ChatRoom({ user, onLogout }) {
           transition: all 0.2s;
           box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
-
         .send-btn:hover:not(:disabled) {
           opacity: 0.9;
           transform: translateY(-1px);
         }
-
         .send-btn:disabled {
           opacity: 0.4;
           cursor: not-allowed;
         }
-
         .center-loader, .empty-state {
           display: flex;
           flex-direction: column;
@@ -553,7 +499,6 @@ export default function ChatRoom({ user, onLogout }) {
         }
       `}</style>
 
-      {/* القائمة الجانبية */}
       <aside className="chat-sidebar">
         <div className="sidebar-header">
           <div className="sidebar-icon-box">
@@ -568,7 +513,6 @@ export default function ChatRoom({ user, onLogout }) {
           </div>
         </div>
 
-        {/* خانة البحث */}
         <div className="search-box-wrapper">
           <div className="search-input-container">
             <Search className="search-icon" />
@@ -582,7 +526,6 @@ export default function ChatRoom({ user, onLogout }) {
           </div>
         </div>
 
-        {/* قائمة المستخدمين */}
         <div className="users-list">
           {loadingUsers ? (
             <div className="center-loader">
@@ -618,7 +561,6 @@ export default function ChatRoom({ user, onLogout }) {
           )}
         </div>
 
-        {/* معلومات المستخدم الحالي */}
         <div className="current-user-footer">
           <div className="current-user-box">
             <div
@@ -638,7 +580,6 @@ export default function ChatRoom({ user, onLogout }) {
         </div>
       </aside>
 
-      {/* نافذة المحادثة */}
       <main className="chat-main">
         {selectedUser ? (
           <>
