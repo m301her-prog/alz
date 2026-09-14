@@ -11,7 +11,7 @@ import {
   Search,
 } from "lucide-react";
 // تم استيراد الدوال الموجودة فعلياً في ملف الخدمات
-import { getRoomMessages, sendMessage } from "../services/authService.js;
+import { getRoomMessages, sendMessage } from "../services/authService.js";
 
 const EMOJIS = [
   "😀", "😂", "😍", "🥰", "😎", "🤔", "😴", "🥳",
