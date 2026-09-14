@@ -1,4 +1,4 @@
-// رابط السيرفر الأساسي على Vercel مع استخدام الروابط الكاملة لضمان التوافق التام مع الأندرويد والمتصفحات
+ // رابط السيرفر الأساسي على Vercel مع استخدام الروابط الكاملة لضمان التوافق التام مع الأندرويد والمتصفحات
 const API_BASE_URL = "https://alz-taupe.vercel.app/api";
 
 /**
@@ -18,7 +18,7 @@ export function validateEmail(email) {
  */
 export async function signup(userData) {
   try {
-    const response = await fetch("https://alz-taupe.vercel.app/api/signup", {
+    const response = await fetch(`${API_BASE_URL}/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +47,7 @@ export async function signup(userData) {
  */
 export async function login(email, password) {
   try {
-    const response = await fetch("https://alz-taupe.vercel.app/api/login", {
+    const response = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,7 +99,7 @@ export function logout() {
  */
 export async function getUsers() {
   try {
-    const response = await fetch("https://alz-taupe.vercel.app/api/users", {
+    const response = await fetch(`${API_BASE_URL}/users`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -127,7 +127,7 @@ export async function getUsers() {
  */
 export async function getRoomMessages(roomId, userId) {
   try {
-    const response = await fetch(`https://alz-taupe.vercel.app/api/messages?roomId=${roomId}&userId=${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/messages?roomId=${roomId}&userId=${userId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -156,7 +156,7 @@ export async function getRoomMessages(roomId, userId) {
  */
 export async function sendMessage(roomId, userId, text) {
   try {
-    const response = await fetch("https://alz-taupe.vercel.app/api/send-message", {
+    const response = await fetch(`${API_BASE_URL}/send-message`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -189,7 +189,7 @@ export async function sendMessage(roomId, userId, text) {
  */
 export async function deleteMessage(messageId, userId) {
   try {
-    const response = await fetch("https://alz-taupe.vercel.app/api/delete-message", {
+    const response = await fetch(`${API_BASE_URL}/delete-message`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
