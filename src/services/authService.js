@@ -94,6 +94,32 @@ export function logout() {
 }
 
 /**
+ * جلب كافة المستخدمين المسجلين في التطبيق
+ * @returns {Promise<Array>} - قائمة المستخدمين
+ */
+export async function getUsers() {
+  try {
+    const response = await fetch("https://alz-taupe.vercel.app/api/users", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "فشل في جلب المستخدمين");
+    }
+
+    return Array.isArray(data) ? data : data.users || [];
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw error;
+  }
+}
+
+/**
  * جلب الرسائل الخاصة بغرفة معينة مع التحقق من عضوية المستخدم
  * @param {string} roomId - معرف الغرفة
  * @param {string} userId - معرف المستخدم الحالي
