@@ -9,8 +9,9 @@ import {
   Users,
   Lock,
   Search,
+  ArrowRight,
 } from "lucide-react";
-// تم تصحيح مسار الاستيراد وإغلاق علامة التنصيص بشكل صحيح
+// تأكد من صحة مسار الاستيراد حسب مشروعك
 import { getRoomMessages, sendMessage } from "../services/authService.js";
 
 const EMOJIS = [
@@ -28,35 +29,22 @@ function formatTime(isoString) {
   });
 }
 
-export default function ChatRoom({ user, onLogout }) {
+// ==========================================
+// 1. مكون قائمة المستخدمين (الشاشة الأولى)
+// ==========================================
+export function UsersList({ user, onSelectUser, onLogout }) {
   const [usersList, setUsersList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState("");
-  const [showEmoji, setShowEmoji] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
 
-  const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
-
-  // جلب الحسابات لتعبئة القائمة الجانبية
   useEffect(() => {
     async function fetchUsers() {
       try {
         const response = await fetch('https://alz-taupe.vercel.app/api/users');
         const data = await response.json();
-        
         const rawUsers = Array.isArray(data) ? data : data.users || [];
         const otherUsers = rawUsers.filter((u) => u.id !== user.id);
-        
         setUsersList(otherUsers);
-        // اختياري: تعيين أول مستخدم افتراضياً إذا لم يكن هناك مستخدم محدد
-        if (otherUsers.length > 0 && !selectedUser) {
-          setSelectedUser(otherUsers[0]);
-        }
       } catch (err) {
         console.error("Error fetching users:", err);
       } finally {
@@ -66,14 +54,119 @@ export default function ChatRoom({ user, onLogout }) {
     fetchUsers();
   }, [user.id]);
 
+  const filteredUsers = usersList.filter((u) => 
+    (u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // الدالة المطلوبة: عند الضغط على اسم المستخدم، يتم الانتقال للمكون الجديد وتمرير بيانات المستخدم المختار
+  const handleUserClick = (selectedUserObject) => {
+    onSelectUser(selectedUserObject);
+  };
+
+  return (
+    <div className="users-screen-container" dir="rtl">
+      <div className="users-screen-card">
+        <div className="sidebar-header">
+          <div className="sidebar-icon-box">
+            <Users size={22} />
+          </div>
+          <div>
+            <h1 className="sidebar-title">اختر محادثة</h1>
+            <span className="sidebar-status">
+              <span className="status-dot"></span>
+              مرحباً، {user.name}
+            </span>
+          </div>
+        </div>
+
+        <div className="search-box-wrapper">
+          <div className="search-input-container">
+            <Search className="search-icon" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث عن مستخدم بالاسم أو البريد..."
+              className="search-input"
+            />
+          </div>
+        </div>
+
+        <div className="users-list">
+          {loadingUsers ? (
+            <div className="center-loader">
+              <Loader2 className="animate-spin" size={24} color="#6366f1" />
+              <p>جاري تحميل الحسابات...</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="center-loader">
+              <p>لا توجد حسابات مطابقة</p>
+            </div>
+          ) : (
+            filteredUsers.map((u) => (
+              <button
+                key={u.id}
+                onClick={() => handleUserClick(u)}
+                className="user-card"
+              >
+                <div
+                  className="user-avatar"
+                  style={{ backgroundColor: u.color || "#6366f1" }}
+                >
+                  {u.avatar || u.name?.charAt(0) || "👤"}
+                </div>
+                <div className="user-info">
+                  <h3 className="user-name">{u.name || "مستخدم بدون اسم"}</h3>
+                  <p className="user-email">{u.email || "لا يوجد بريد"}</p>
+                </div>
+                <MessageCircle size={18} color="#6366f1" style={{ opacity: 0.6 }} />
+              </button>
+            ))
+          )}
+        </div>
+
+        <div className="current-user-footer">
+          <div className="current-user-box">
+            <div
+              className="user-avatar"
+              style={{ width: "36px", height: "36px", backgroundColor: user.color || "#6366f1" }}
+            >
+              {user.avatar || user.name?.charAt(0) || "👤"}
+            </div>
+            <div className="user-info">
+              <p className="user-name">{user.name}</p>
+              <p className="user-email">{user.email}</p>
+            </div>
+            <button onClick={onLogout} className="logout-btn" title="تسجيل الخروج">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ==========================================
+// 2. مكون شاشة الدردشة المستقل (المكون الثاني)
+// ==========================================
+export function ChatRoomPage({ user, selectedUser, onBack }) {
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [sendingMessage, setSendingMessage] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
   const getPrivateRoomId = (userId1, userId2) => {
     return [userId1, userId2].sort().join("_private_chat_");
   };
 
-  // جلب الرسائل الخاصة عند الضغط وتغيير المستخدم المحدد
   useEffect(() => {
-    if (!selectedUser) return;
-
     async function loadPrivateMessages() {
       setLoadingMessages(true);
       try {
@@ -94,13 +187,12 @@ export default function ChatRoom({ user, onLogout }) {
   }, [messages]);
 
   async function handleSend() {
-    if (!inputText.trim() || !selectedUser) return;
+    if (!inputText.trim()) return;
     setSendingMessage(true);
     try {
       const roomId = getPrivateRoomId(user.id, selectedUser.id);
       const res = await sendMessage(roomId, user.id, inputText);
       const newMsg = res.message || res;
-      
       setMessages((prev) => [...prev, newMsg]);
       setInputText("");
       setShowEmoji(false);
@@ -129,32 +221,167 @@ export default function ChatRoom({ user, onLogout }) {
     }
   }
 
-  const filteredUsers = usersList.filter((u) => 
-    (u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+  return (
+    <div className="chat-main-standalone" dir="rtl">
+      <header className="chat-header">
+        <button onClick={onBack} className="toolbar-btn" title="الرجوع للقائمة">
+          <ArrowRight size={20} />
+        </button>
+        <div
+          className="user-avatar"
+          style={{ backgroundColor: selectedUser.color || "#6366f1" }}
+        >
+          {selectedUser.avatar || selectedUser.name?.charAt(0) || "👤"}
+        </div>
+        <div className="user-info" style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <h2 className="user-name" style={{ fontSize: "15px" }}>{selectedUser.name}</h2>
+            <Lock size={14} color="#818cf8" />
+          </div>
+          <p className="user-email">{selectedUser.email}</p>
+        </div>
+      </header>
+
+      <div className="messages-area">
+        {loadingMessages ? (
+          <div className="center-loader">
+            <Loader2 className="animate-spin" size={28} color="#6366f1" />
+            <p>جاري تحميل الرسائل...</p>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="empty-state">
+            <div style={{ padding: "16px", backgroundColor: "#1f2937", borderRadius: "16px" }}>
+              <MessageCircle size={32} color="#818cf8" />
+            </div>
+            <p>ابدأ أول محادثة خاصة الآن مع {selectedUser.name}</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isOwn = msg.userId === user.id;
+            return (
+              <div key={msg.id || Math.random()} className={`message-row ${isOwn ? "own" : ""}`}>
+                <div
+                  className="msg-avatar"
+                  style={{ backgroundColor: msg.color || (isOwn ? user.color : selectedUser.color) || "#6366f1" }}
+                >
+                  {msg.avatar || "👤"}
+                </div>
+                <div className={`message-bubble ${isOwn ? "own" : "other"}`}>
+                  <p style={{ margin: 0 }}>{msg.text}</p>
+                  <span className="message-time">
+                    {formatTime(msg.createdAt || new Date())}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="chat-input-footer">
+        {showEmoji && (
+          <div className="emoji-picker-popup">
+            {EMOJIS.map((emoji, i) => (
+              <button
+                key={i}
+                onClick={() => handleEmojiClick(emoji)}
+                className="emoji-btn"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="input-toolbar">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="toolbar-btn"
+            title="إرفاق ملف"
+          >
+            <Paperclip size={20} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: "none" }}
+            onChange={handleFileSelect}
+          />
+
+          <button
+            onClick={() => setShowEmoji(!showEmoji)}
+            className={`toolbar-btn ${showEmoji ? "active" : ""}`}
+            title="إيموجي"
+          >
+            <Smile size={20} />
+          </button>
+
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={`اكتب رسالة خاصة إلى ${selectedUser.name}...`}
+            className="main-text-input"
+          />
+
+          <button
+            onClick={handleSend}
+            disabled={!inputText.trim() || sendingMessage}
+            className="send-btn"
+            title="إرسال"
+          >
+            {sendingMessage ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              <Send size={20} />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
+}
+
+
+// ==========================================
+// 3. المكون الرئيسي (المتحكم في التنقل بين الشاشتين)
+// ==========================================
+export default function AppChatManager({ user, onLogout }) {
+  const [selectedUser, setSelectedUser] = useState(null);
 
   return (
-    <div className="chat-container" dir="rtl">
+    <div className="app-root-container">
       <style>{`
-        .chat-container {
-          display: flex;
-          height: 100vh;
+        .app-root-container {
           width: 100vw;
+          height: 100vh;
           background-color: #0b0f19;
           color: #f1f5f9;
           font-family: 'Cairo', sans-serif;
           overflow: hidden;
         }
-        .chat-sidebar {
-          width: 320px;
+        .users-screen-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background-color: #070a12;
+          padding: 20px;
+        }
+        .users-screen-card {
+          width: 100%;
+          max-width: 480px;
+          height: 85vh;
           background-color: #111827;
-          border-left: 1px solid #1f2937;
+          border: 1px solid #1f2937;
+          border-radius: 24px;
           display: flex;
           flex-direction: column;
-          flex-shrink: 0;
-          box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
-          z-index: 20;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+          overflow: hidden;
         }
         .sidebar-header {
           padding: 20px;
@@ -176,12 +403,12 @@ export default function ChatRoom({ user, onLogout }) {
         }
         .sidebar-title {
           font-weight: 700;
-          font-size: 15px;
+          font-size: 16px;
           color: #ffffff;
           margin: 0;
         }
         .sidebar-status {
-          font-size: 11px;
+          font-size: 12px;
           color: #10b981;
           display: flex;
           align-items: center;
@@ -196,7 +423,7 @@ export default function ChatRoom({ user, onLogout }) {
           box-shadow: 0 0 8px #10b981;
         }
         .search-box-wrapper {
-          padding: 16px 16px 8px 16px;
+          padding: 16px;
         }
         .search-input-container {
           position: relative;
@@ -216,7 +443,7 @@ export default function ChatRoom({ user, onLogout }) {
           border: 1px solid #374151;
           border-radius: 12px;
           padding: 10px 40px 10px 14px;
-          font-size: 12px;
+          font-size: 13px;
           color: #fff;
           outline: none;
           transition: all 0.3s ease;
@@ -226,37 +453,34 @@ export default function ChatRoom({ user, onLogout }) {
           box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
         .users-list {
-          padding: 12px;
+          padding: 0 16px 16px 16px;
           flex: 1;
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
         .user-card {
           width: 100%;
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 12px;
+          padding: 12px 14px;
           border-radius: 14px;
-          border: 1px solid transparent;
-          background-color: transparent;
+          border: 1px solid #1f2937;
+          background-color: #161e2e;
           cursor: pointer;
           transition: all 0.2s ease;
           text-align: right;
         }
         .user-card:hover {
           background-color: #1f2937;
-          border-color: #374151;
-        }
-        .user-card.active {
-          background-color: rgba(99, 102, 241, 0.12);
-          border-color: rgba(99, 102, 241, 0.4);
+          border-color: #6366f1;
+          transform: translateY(-1px);
         }
         .user-avatar {
-          width: 40px;
-          height: 40px;
+          width: 42px;
+          height: 42px;
           border-radius: 12px;
           display: flex;
           align-items: center;
@@ -273,7 +497,7 @@ export default function ChatRoom({ user, onLogout }) {
         }
         .user-name {
           font-weight: 600;
-          font-size: 13px;
+          font-size: 14px;
           color: #f8fafc;
           margin: 0 0 2px 0;
           white-space: nowrap;
@@ -281,7 +505,7 @@ export default function ChatRoom({ user, onLogout }) {
           text-overflow: ellipsis;
         }
         .user-email {
-          font-size: 11px;
+          font-size: 12px;
           color: #94a3b8;
           margin: 0;
           white-space: nowrap;
@@ -318,8 +542,9 @@ export default function ChatRoom({ user, onLogout }) {
           color: #ef4444;
           background-color: rgba(239, 68, 68, 0.1);
         }
-        .chat-main {
-          flex: 1;
+        .chat-main-standalone {
+          width: 100%;
+          height: 100%;
           display: flex;
           flex-direction: column;
           background-color: #070a12;
@@ -501,213 +726,20 @@ export default function ChatRoom({ user, onLogout }) {
         }
       `}</style>
 
-      <aside className="chat-sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-icon-box">
-            <Users size={22} />
-          </div>
-          <div>
-            <h1 className="sidebar-title">الرسائل الخاصة</h1>
-            <span className="sidebar-status">
-              <span className="status-dot"></span>
-              متصل الآن
-            </span>
-          </div>
-        </div>
-
-        <div className="search-box-wrapper">
-          <div className="search-input-container">
-            <Search className="search-icon" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن مستخدم بالاسم أو البريد..."
-              className="search-input"
-            />
-          </div>
-        </div>
-
-        <div className="users-list">
-          {loadingUsers ? (
-            <div className="center-loader">
-              <Loader2 className="animate-spin" size={24} color="#6366f1" />
-              <p>جاري تحميل الحسابات...</p>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="center-loader">
-              <p>لا توجد حسابات مطابقة</p>
-            </div>
-          ) : (
-            filteredUsers.map((u) => {
-              const isSelected = selectedUser?.id === u.id;
-              return (
-                <button
-                  key={u.id}
-                  // عند الضغط هنا، يتم تحديث selectedUser لفتح شات خاص مع هذا المستخدم وتغيير الحالة بصرياً
-                  onClick={() => setSelectedUser(u)}
-                  className={`user-card ${isSelected ? "active" : ""}`}
-                >
-                  <div
-                    className="user-avatar"
-                    style={{ backgroundColor: u.color || "#6366f1" }}
-                  >
-                    {u.avatar || u.name?.charAt(0) || "👤"}
-                  </div>
-                  <div className="user-info">
-                    <h3 className="user-name">{u.name || "مستخدم بدون اسم"}</h3>
-                    <p className="user-email">{u.email || "لا يوجد بريد"}</p>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-
-        <div className="current-user-footer">
-          <div className="current-user-box">
-            <div
-              className="user-avatar"
-              style={{ width: "36px", height: "36px", backgroundColor: user.color || "#6366f1" }}
-            >
-              {user.avatar || user.name?.charAt(0) || "👤"}
-            </div>
-            <div className="user-info">
-              <p className="user-name">{user.name}</p>
-              <p className="user-email">{user.email}</p>
-            </div>
-            <button onClick={onLogout} className="logout-btn" title="تسجيل الخروج">
-              <LogOut size={18} />
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <main className="chat-main">
-        {selectedUser ? (
-          <>
-            <header className="chat-header">
-              <div
-                className="user-avatar"
-                style={{ backgroundColor: selectedUser.color || "#6366f1" }}
-              >
-                {selectedUser.avatar || selectedUser.name?.charAt(0) || "👤"}
-              </div>
-              <div className="user-info">
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <h2 className="user-name" style={{ fontSize: "15px" }}>{selectedUser.name}</h2>
-                  <Lock size={14} color="#818cf8" />
-                </div>
-                <p className="user-email">{selectedUser.email}</p>
-              </div>
-            </header>
-
-            <div className="messages-area">
-              {loadingMessages ? (
-                <div className="center-loader">
-                  <Loader2 className="animate-spin" size={28} color="#6366f1" />
-                  <p>جاري تحميل الرسائل...</p>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="empty-state">
-                  <div style={{ padding: "16px", backgroundColor: "#1f2937", borderRadius: "16px" }}>
-                    <MessageCircle size={32} color="#818cf8" />
-                  </div>
-                  <p>ابدأ أول محادثة خاصة الآن مع {selectedUser.name}</p>
-                </div>
-              ) : (
-                messages.map((msg) => {
-                  const isOwn = msg.userId === user.id;
-                  return (
-                    <div key={msg.id || Math.random()} className={`message-row ${isOwn ? "own" : ""}`}>
-                      <div
-                        className="msg-avatar"
-                        style={{ backgroundColor: msg.color || (isOwn ? user.color : selectedUser.color) || "#6366f1" }}
-                      >
-                        {msg.avatar || "👤"}
-                      </div>
-                      <div className={`message-bubble ${isOwn ? "own" : "other"}`}>
-                        <p style={{ margin: 0 }}>{msg.text}</p>
-                        <span className="message-time">
-                          {formatTime(msg.createdAt || new Date())}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="chat-input-footer">
-              {showEmoji && (
-                <div className="emoji-picker-popup">
-                  {EMOJIS.map((emoji, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleEmojiClick(emoji)}
-                      className="emoji-btn"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="input-toolbar">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="toolbar-btn"
-                  title="إرفاق ملف"
-                >
-                  <Paperclip size={20} />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  style={{ display: "none" }}
-                  onChange={handleFileSelect}
-                />
-
-                <button
-                  onClick={() => setShowEmoji(!showEmoji)}
-                  className={`toolbar-btn ${showEmoji ? "active" : ""}`}
-                  title="إيموجي"
-                >
-                  <Smile size={20} />
-                </button>
-
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`اكتب رسالة خاصة إلى ${selectedUser.name}...`}
-                  className="main-text-input"
-                />
-
-                <button
-                  onClick={handleSend}
-                  disabled={!inputText.trim() || sendingMessage}
-                  className="send-btn"
-                  title="إرسال"
-                >
-                  {sendingMessage ? (
-                    <Loader2 className="animate-spin" size={20} />
-                  ) : (
-                    <Send size={20} />
-                  )}
-                </button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="empty-state">
-            <Users size={48} style={{ opacity: 0.3 }} />
-            <p>الرجاء اختيار مستخدم من القائمة الجانبية لبدء المحادثة الخاصة</p>
-          </div>
-        )}
-      </main>
+      {/* التبديل الشرطي بناءً على اختيار المستخدم */}
+      {!selectedUser ? (
+        <UsersList 
+          user={user} 
+          onSelectUser={(u) => setSelectedUser(u)} 
+          onLogout={onLogout} 
+        />
+      ) : (
+        <ChatRoomPage 
+          user={user} 
+          selectedUser={selectedUser} 
+          onBack={() => setSelectedUser(null)} 
+        />
+      )}
     </div>
   );
 }
