@@ -1,10 +1,17 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
+// التأكد من إضافة sslmode=require أو verify-full للرابط لمنع التحذير، مع السماح بالاتصال السحابي
+const connectionString = process.env.DATABASE_URL;
+const separator = connectionString.includes('?') ? '&' : '?';
+const secureConnectionString = connectionString.includes('sslmode=') 
+  ? connectionString 
+  : `${connectionString}${separator}sslmode=require`;
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: secureConnectionString,
   ssl: {
-    rejectUnauthorized: false // ضروري للاتصال بقواعد البيانات السحابية مثل Supabase أو Neon
+    rejectUnauthorized: false // مطلوب لتجاوز شهادات الأمان الذاتية في قواعد البيانات السحابية مثل Neon و Supabase
   }
 });
 
