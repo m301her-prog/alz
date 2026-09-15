@@ -12,17 +12,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    // التحقق من العضوية في الغرفة الخاصة قبل السماح بالإرسال
-    const memberCheck = await pool.query(
-      `SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2`,
-      [roomId, userId]
-    );
+    // 1. التحقق الذكي من الصلاحية والخصوصية قبل السماح بإرسال الرسالة
+    if (roomId.includes('_private_chat_')) {
+      const parts = roomId.split('_private_chat_');
+      
+      // التأكد أن المستخدم الذي يحاول الإرسال هو أحد طرفي المحادثة الخاصة فقط
+      if (!parts.includes(userId)) {
+        return res.status(403).json({ error: 'Access denied: You are not part of this private chat' });
+      }
+    } else {
+      // إذا لم تكن غرفة خاصة ثنائية، نتحقق من جدول الأعضاء العادي
+      const memberCheck = await pool.query(
+        `SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2`,
+        [roomId, userId]
+      );
 
-    if (memberCheck.rows.length === 0) {
-      return res.status(403).json({ error: 'You must be a member of this private room to send messages' });
+      if (memberCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'You must be a member of this room to send messages' });
+      }
     }
 
-    // إدخال الرسالة
+    // 2. إدخال الرسالة بأمان تام بعد اجتياز التحقق
     const newMessage = await pool.query(
       `INSERT INTO messages (room_id, user_id, text) 
        VALUES ($1, $2, $3) 
@@ -32,7 +42,7 @@ export default async function handler(req, res) {
 
     return res.status(201).json(newMessage.rows[0]);
   } catch (error) {
-    console.error(error);
+    console.error("Error sending message:", error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
