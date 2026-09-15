@@ -212,3 +212,35 @@ export async function deleteMessage(messageId, userId) {
     throw error;
   }
 }
+
+/**
+ * حذف رسائل الغرفة بالكامل (أو محتوى الغرفة)
+ * @param {string} roomId - معرف الغرفة
+ * @param {string} userId - معرف المستخدم صاحب الطلب
+ * @returns {Promise<Object>} - تأكيد النجاح
+ */
+export async function deleteRoomMessages(roomId, userId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/delete-room-messages`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        roomId,
+        userId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "فشل في حذف رسائل الغرفة");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error deleting room messages:", error);
+    throw error;
+  }
+}
