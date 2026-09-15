@@ -10,9 +10,10 @@ import {
   Lock,
   Search,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
-// تأكد من صحة مسار الاستيراد حسب مشروعك
-import { getRoomMessages, sendMessage } from "../services/authService.js";
+// تأكد من إضافة الدوال الخاصة بالحذف في ملف authService.js لديك
+import { getRoomMessages, sendMessage, deleteRoomMessages, deleteMessage } from "../services/authService.js";
 
 const EMOJIS = [
   "😀", "😂", "😍", "🥰", "😎", "🤔", "😴", "🥳",
@@ -59,7 +60,6 @@ export function UsersList({ user, onSelectUser, onLogout }) {
     (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // الدالة المطلوبة: عند الضغط على اسم المستخدم، يتم الانتقال للمكون الجديد وتمرير بيانات المستخدم المختار
   const handleUserClick = (selectedUserObject) => {
     onSelectUser(selectedUserObject);
   };
@@ -166,12 +166,13 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
     return [userId1, userId2].sort().join("_private_chat_");
   };
 
+  const currentRoomId = getPrivateRoomId(user.id, selectedUser.id);
+
   useEffect(() => {
     async function loadPrivateMessages() {
       setLoadingMessages(true);
       try {
-        const roomId = getPrivateRoomId(user.id, selectedUser.id);
-        const data = await getRoomMessages(roomId, user.id);
+        const data = await getRoomMessages(currentRoomId, user.id);
         setMessages(Array.isArray(data) ? data : data.messages || []);
       } catch (err) {
         console.error("Error loading private messages:", err);
@@ -180,7 +181,7 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
       }
     }
     loadPrivateMessages();
-  }, [selectedUser, user.id]);
+  }, [currentRoomId, user.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -190,8 +191,7 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
     if (!inputText.trim()) return;
     setSendingMessage(true);
     try {
-      const roomId = getPrivateRoomId(user.id, selectedUser.id);
-      const res = await sendMessage(roomId, user.id, inputText);
+      const res = await sendMessage(currentRoomId, user.id, inputText);
       const newMsg = res.message || res;
       setMessages((prev) => [...prev, newMsg]);
       setInputText("");
@@ -200,6 +200,31 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
       console.error("Error sending message:", err);
     } finally {
       setSendingMessage(false);
+    }
+  }
+
+  // دالة حذف محادثة كاملة (الغرفة بالكامل) مع تمرير الـ ID
+  async function handleDeleteAllChat() {
+    if (!window.confirm("هل أنت متأكد من حذف محادثة بالكامل؟")) return;
+    try {
+      if (typeof deleteRoomMessages === "function") {
+        await deleteRoomMessages(currentRoomId, user.id);
+      }
+      setMessages([]);
+    } catch (err) {
+      console.error("Error deleting room messages:", err);
+    }
+  }
+
+  // دالة حذف رسالة محددة عبر تمرير معرف الرسالة messageId
+  async function handleDeleteSingleMessage(messageId) {
+    try {
+      if (typeof deleteMessage === "function") {
+        await deleteMessage(messageId, user.id);
+      }
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    } catch (err) {
+      console.error("Error deleting message:", err);
     }
   }
 
@@ -238,8 +263,17 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
             <h2 className="user-name" style={{ fontSize: "15px" }}>{selectedUser.name}</h2>
             <Lock size={14} color="#818cf8" />
           </div>
-          <p className="user-email">{selectedUser.email}</p>
+          <p className="user-email">معرف الغرفة: {currentRoomId.substring(0, 15)}...</p>
         </div>
+
+        {/* زر حذف المحادثة بالكامل */}
+        <button
+          onClick={handleDeleteAllChat}
+          className="toolbar-btn delete-chat-btn"
+          title="حذف المحادثة بالكامل"
+        >
+          <Trash2 size={20} color="#ef4444" />
+        </button>
       </header>
 
       <div className="messages-area">
@@ -267,7 +301,17 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
                   {msg.avatar || "👤"}
                 </div>
                 <div className={`message-bubble ${isOwn ? "own" : "other"}`}>
-                  <p style={{ margin: 0 }}>{msg.text}</p>
+                  <div className="message-content-wrapper">
+                    <p style={{ margin: 0 }}>{msg.text}</p>
+                    {/* زر حذف رسالة محددة (نص محدد) مع تمرير الـ id الخاص بالرسالة */}
+                    <button 
+                      onClick={() => handleDeleteSingleMessage(msg.id)} 
+                      className="delete-msg-btn"
+                      title="حذف هذه الرسالة"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
                   <span className="message-time">
                     {formatTime(msg.createdAt || new Date())}
                   </span>
@@ -596,6 +640,25 @@ export default function AppChatManager({ user, onLogout }) {
           box-shadow: 0 4px 12px rgba(0,0,0,0.2);
           border: 1px solid transparent;
           word-break: break-word;
+          position: relative;
+        }
+        .message-content-wrapper {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .delete-msg-btn {
+          background: none;
+          border: none;
+          color: inherit;
+          opacity: 0.4;
+          cursor: pointer;
+          padding: 2px;
+          transition: opacity 0.2s;
+        }
+        .delete-msg-btn:hover {
+          opacity: 1;
         }
         .message-bubble.own {
           background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
@@ -726,7 +789,6 @@ export default function AppChatManager({ user, onLogout }) {
         }
       `}</style>
 
-      {/* التبديل الشرطي بناءً على اختيار المستخدم */}
       {!selectedUser ? (
         <UsersList 
           user={user} 
