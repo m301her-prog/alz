@@ -11,6 +11,8 @@ import {
   Search,
   ArrowRight,
   Trash2,
+  CheckCheck,
+  Check,
 } from "lucide-react";
 // تأكد من إضافة الدوال الخاصة بالحذف في ملف authService.js لديك
 import { getRoomMessages, sendMessage, deleteRoomMessages, deleteMessage } from "../services/authService.js";
@@ -293,7 +295,7 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
           messages.map((msg) => {
             const isOwn = msg.userId === user.id;
             return (
-              <div key={msg.id || Math.random()} className={`message-row ${isOwn ? "own" : ""}`}>
+              <div key={msg.id || Math.random()} className={`message-row ${isOwn ? "own" : "other"}`}>
                 <div
                   className="msg-avatar"
                   style={{ backgroundColor: msg.color || (isOwn ? user.color : selectedUser.color) || "#6366f1" }}
@@ -312,9 +314,16 @@ export function ChatRoomPage({ user, selectedUser, onBack }) {
                       <Trash2 size={12} />
                     </button>
                   </div>
-                  <span className="message-time">
-                    {formatTime(msg.createdAt || new Date())}
-                  </span>
+                  <div className="message-footer-info">
+                    <span className="message-time">
+                      {formatTime(msg.createdAt || new Date())}
+                    </span>
+                    {isOwn && (
+                      <span className="message-status-icon">
+                        <CheckCheck size={14} color="#6366f1" />
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -401,10 +410,18 @@ export default function AppChatManager({ user, onLogout }) {
         .app-root-container {
           width: 100vw;
           height: 100vh;
+          height: 100dvh; /* لدعم الشاشات الكاملة في أندرويد والمتصفحات الحديثة */
           background-color: #0b0f19;
           color: #f1f5f9;
           font-family: 'Cairo', sans-serif;
           overflow: hidden;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          flex-direction: column;
         }
         .users-screen-container {
           display: flex;
@@ -413,12 +430,14 @@ export default function AppChatManager({ user, onLogout }) {
           width: 100%;
           height: 100%;
           background-color: #070a12;
-          padding: 20px;
+          padding: 10px;
+          box-sizing: border-box;
         }
         .users-screen-card {
           width: 100%;
           max-width: 480px;
-          height: 85vh;
+          height: 90vh;
+          max-height: 100%;
           background-color: #111827;
           border: 1px solid #1f2937;
           border-radius: 24px;
@@ -428,7 +447,7 @@ export default function AppChatManager({ user, onLogout }) {
           overflow: hidden;
         }
         .sidebar-header {
-          padding: 20px;
+          padding: 16px;
           border-bottom: 1px solid #1f2937;
           display: flex;
           align-items: center;
@@ -467,7 +486,7 @@ export default function AppChatManager({ user, onLogout }) {
           box-shadow: 0 0 8px #10b981;
         }
         .search-box-wrapper {
-          padding: 16px;
+          padding: 12px 16px;
         }
         .search-input-container {
           position: relative;
@@ -491,6 +510,7 @@ export default function AppChatManager({ user, onLogout }) {
           color: #fff;
           outline: none;
           transition: all 0.3s ease;
+          box-sizing: border-box;
         }
         .search-input:focus {
           border-color: #6366f1;
@@ -516,6 +536,7 @@ export default function AppChatManager({ user, onLogout }) {
           cursor: pointer;
           transition: all 0.2s ease;
           text-align: right;
+          box-sizing: border-box;
         }
         .user-card:hover {
           background-color: #1f2937;
@@ -557,7 +578,7 @@ export default function AppChatManager({ user, onLogout }) {
           text-overflow: ellipsis;
         }
         .current-user-footer {
-          padding: 16px;
+          padding: 12px 16px;
           border-top: 1px solid #1f2937;
           background-color: #0d1322;
         }
@@ -565,7 +586,7 @@ export default function AppChatManager({ user, onLogout }) {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 10px;
+          padding: 8px 10px;
           background-color: #1f2937;
           border-radius: 12px;
           border: 1px solid #374151;
@@ -593,31 +614,41 @@ export default function AppChatManager({ user, onLogout }) {
           flex-direction: column;
           background-color: #070a12;
           position: relative;
+          overflow: hidden;
+          box-sizing: border-box;
         }
         .chat-header {
           background-color: #111827;
           border-bottom: 1px solid #1f2937;
-          padding: 16px 24px;
+          padding: 12px 16px;
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 12px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          flex-shrink: 0;
         }
         .messages-area {
           flex: 1;
           overflow-y: auto;
-          padding: 24px;
+          padding: 16px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px;
+          box-sizing: border-box;
         }
         .message-row {
           display: flex;
           align-items: flex-end;
-          gap: 10px;
+          gap: 8px;
+          width: 100%;
         }
         .message-row.own {
+          justify-content: flex-start;
           flex-direction: row-reverse;
+        }
+        .message-row.other {
+          justify-content: flex-start;
+          flex-direction: row;
         }
         .msg-avatar {
           width: 32px;
@@ -632,21 +663,22 @@ export default function AppChatManager({ user, onLogout }) {
           flex-shrink: 0;
         }
         .message-bubble {
-          max-width: 65%;
-          padding: 12px 16px;
+          max-width: 75%;
+          padding: 10px 14px;
           border-radius: 16px;
           font-size: 13px;
-          line-height: 1.6;
+          line-height: 1.5;
           box-shadow: 0 4px 12px rgba(0,0,0,0.2);
           border: 1px solid transparent;
           word-break: break-word;
           position: relative;
+          box-sizing: border-box;
         }
         .message-content-wrapper {
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
-          gap: 12px;
+          gap: 10px;
         }
         .delete-msg-btn {
           background: none;
@@ -672,27 +704,36 @@ export default function AppChatManager({ user, onLogout }) {
           border-top-left-radius: 4px;
           border-color: #374151;
         }
+        .message-footer-info {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 6px;
+          margin-top: 4px;
+        }
         .message-time {
           font-size: 10px;
-          margin-top: 6px;
-          display: block;
-          text-align: left;
           opacity: 0.7;
+        }
+        .message-status-icon {
+          display: flex;
+          align-items: center;
         }
         .chat-input-footer {
           border-top: 1px solid #1f2937;
           background-color: #111827;
-          padding: 16px 24px;
+          padding: 12px 16px;
           position: relative;
+          flex-shrink: 0;
         }
         .emoji-picker-popup {
           position: absolute;
           bottom: calc(100% + 12px);
-          right: 24px;
+          right: 16px;
           background-color: #111827;
           border: 1px solid #374151;
           border-radius: 16px;
-          padding: 12px;
+          padding: 10px;
           display: grid;
           grid-template-columns: repeat(8, 1fr);
           gap: 6px;
@@ -714,7 +755,7 @@ export default function AppChatManager({ user, onLogout }) {
         .input-toolbar {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 8px;
           max-width: 900px;
           margin: 0 auto;
         }
@@ -723,12 +764,13 @@ export default function AppChatManager({ user, onLogout }) {
           border: 1px solid transparent;
           color: #94a3b8;
           cursor: pointer;
-          padding: 10px;
+          padding: 8px;
           border-radius: 12px;
           transition: all 0.2s;
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
         }
         .toolbar-btn:hover {
           color: #fff;
@@ -745,11 +787,13 @@ export default function AppChatManager({ user, onLogout }) {
           background-color: #1f2937;
           border: 1px solid #374151;
           border-radius: 12px;
-          padding: 12px 16px;
+          padding: 10px 14px;
           font-size: 13px;
           color: #fff;
           outline: none;
           transition: all 0.3s;
+          min-width: 0;
+          box-sizing: border-box;
         }
         .main-text-input:focus {
           border-color: #6366f1;
@@ -760,13 +804,14 @@ export default function AppChatManager({ user, onLogout }) {
           border: 1px solid rgba(99, 102, 241, 0.4);
           color: #fff;
           cursor: pointer;
-          padding: 12px 16px;
+          padding: 10px 14px;
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
           transition: all 0.2s;
           box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+          flex-shrink: 0;
         }
         .send-btn:hover:not(:disabled) {
           opacity: 0.9;
