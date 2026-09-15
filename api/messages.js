@@ -12,27 +12,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. التحقق أن الغرفة خاصة وأن المستخدم عضو فيها
-    const membershipCheck = await pool.query(
-      `SELECT r.is_private, rm.user_id 
-       FROM rooms r 
-       LEFT JOIN room_members rm ON r.id = rm.room_id AND rm.user_id = $2
-       WHERE r.id = $1`,
-      [roomId, userId]
-    );
-
-    if (membershipCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Room not found' });
+    // 1. التحقق الذكي: هل الـ roomId مصمم كدردشة خاصة (يحتوي على معرفين مفصولين بـ _private_chat_)؟
+    if (roomId.includes('_private_chat_')) {
+      const parts = roomId.split('_private_chat_');
+      
+      // التأكد أن المعرفين الموجودين في اسم الغرفة هما اللذان يطلبان المحادثة
+      if (!parts.includes(userId)) {
+        return res.status(403).json({ error: 'Access denied: You are not part of this private chat' });
+      }
+    } else {
+      // إذا لم تكن غرفة خاصة بالطريقة الثنائية، نتحقق من جدول الـ rooms العادي
+      const membershipCheck = await pool.query(
+        `SELECT rm.user_id FROM room_members rm WHERE rm.room_id = $1 AND rm.user_id = $2`,
+        [roomId, userId]
+      );
+      if (membershipCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
     }
 
-    const room = membershipCheck.rows[0];
-
-    // إذا كانت الغرفة خاصة وليست عامة، اشترط أن يكون المستخدم عضواً مسجلاً فيها
-    if (room.is_private && !room.user_id) {
-      return res.status(403).json({ error: 'Access denied: You are not a member of this private room' });
-    }
-
-    // 2. جلب الرسائل إذا تمت الموافقة
+    // 2. إذا اجتاز التحقق بنجاح، يتم جلب الرسائل الخاصة بهذه الغرفة فقط
     const messages = await pool.query(
       `SELECT m.id, m.text, m.created_at, u.id as user_id, u.name as user_name, u.avatar, u.color
        FROM messages m
@@ -44,7 +43,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(messages.rows);
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching private messages:", error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
