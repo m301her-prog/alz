@@ -10,7 +10,7 @@ import {
   Lock,
   Search,
 } from "lucide-react";
-// تم استيراد الدوال الموجودة فعلياً في ملف الخدمات
+// تم تصحيح مسار الاستيراد وإغلاق علامة التنصيص بشكل صحيح
 import { getRoomMessages, sendMessage } from "../services/authService.js";
 
 const EMOJIS = [
@@ -42,7 +42,7 @@ export default function ChatRoom({ user, onLogout }) {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // جلب الحسابات مباشرة لتجنب أي مشاكل في التصدير
+  // جلب الحسابات لتعبئة القائمة الجانبية
   useEffect(() => {
     async function fetchUsers() {
       try {
@@ -53,7 +53,8 @@ export default function ChatRoom({ user, onLogout }) {
         const otherUsers = rawUsers.filter((u) => u.id !== user.id);
         
         setUsersList(otherUsers);
-        if (otherUsers.length > 0) {
+        // اختياري: تعيين أول مستخدم افتراضياً إذا لم يكن هناك مستخدم محدد
+        if (otherUsers.length > 0 && !selectedUser) {
           setSelectedUser(otherUsers[0]);
         }
       } catch (err) {
@@ -69,6 +70,7 @@ export default function ChatRoom({ user, onLogout }) {
     return [userId1, userId2].sort().join("_private_chat_");
   };
 
+  // جلب الرسائل الخاصة عند الضغط وتغيير المستخدم المحدد
   useEffect(() => {
     if (!selectedUser) return;
 
@@ -542,6 +544,7 @@ export default function ChatRoom({ user, onLogout }) {
               return (
                 <button
                   key={u.id}
+                  // عند الضغط هنا، يتم تحديث selectedUser لفتح شات خاص مع هذا المستخدم وتغيير الحالة بصرياً
                   onClick={() => setSelectedUser(u)}
                   className={`user-card ${isSelected ? "active" : ""}`}
                 >
