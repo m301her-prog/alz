@@ -21,9 +21,9 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Access denied: You are not part of this private chat' });
       }
     } else {
-      // إذا لم تكن غرفة خاصة بالطريقة الثنائية، نتحقق من جدول الـ rooms العادي
+      // إذا لم تكن غرفة خاصة بالطريقة الثنائية، نتحقق من جدول الـ rooms العادي مع استخدام Type Cast لتجنب تعارض الأنواع
       const membershipCheck = await pool.query(
-        `SELECT rm.user_id FROM room_members rm WHERE rm.room_id = $1 AND rm.user_id = $2`,
+        `SELECT rm.user_id FROM room_members rm WHERE rm.room_id::text = $1::text AND rm.user_id::text = $2::text`,
         [roomId, userId]
       );
       if (membershipCheck.rows.length === 0) {
@@ -31,12 +31,12 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. إذا اجتاز التحقق بنجاح، يتم جلب الرسائل الخاصة بهذه الغرفة فقط
+    // 2. إذا اجتاز التحقق بنجاح، يتم جلب الرسائل مع استخدام ::text للمقارنة والربط لمنع أخطاء الـ uuid
     const messages = await pool.query(
       `SELECT m.id, m.text, m.created_at, u.id as user_id, u.name as user_name, u.avatar, u.color
        FROM messages m
-       JOIN users u ON m.user_id = u.id
-       WHERE m.room_id = $1
+       JOIN users u ON m.user_id::text = u.id::text
+       WHERE m.room_id::text = $1::text
        ORDER BY m.created_at ASC`,
       [roomId]
     );
@@ -44,6 +44,6 @@ export default async function handler(req, res) {
     return res.status(200).json(messages.rows);
   } catch (error) {
     console.error("Error fetching private messages:", error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 }
